@@ -40,7 +40,7 @@
             left: 20px;         /* Tetapkan Kiri di sini */
             width: auto;        /* Lebar mengikuti konten */
             min-width: 260px;
-            border-left: 5px solid #e74c3c; /* Aksen Merah */
+            border-left: 5px solid #fbf316; /* Aksen Merah */
         }
 
         /* Kartu Legenda (Jika nanti dipakai) */
@@ -96,23 +96,66 @@
             .branding-card {
                 top: 10px; left: 10px; right: 10px; /* Full width di atas */
                 width: auto !important;
-                border-left: 3px solid #e74c3c;
+                border-left: 3px solid #fbf316;
             }
             .fab-btn { bottom: 20px; right: 20px; padding: 10px 20px; font-size: 0.9rem; }
             .leaflet-control-zoom { display: none; } /* Sembunyikan tombol zoom di HP (pakai cubit) */
         }
+
+        /* Tombol Toggle Filter (Default Sembunyi di Desktop) */
+        .mobile-filter-toggle {
+            display: none;
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 1000;
+            border-radius: 50px;
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border: 1px solid #ddd;
+        }
+
+        /* --- TAMPILAN MOBILE --- */
+        @media (max-width: 768px) {
+            /* 1. Munculkan Tombol Toggle */
+            .mobile-filter-toggle { display: block; }
+
+            /* 2. Atur Kartu Filter jadi Popup Tengah */
+            .filter-card {
+                display: none; /* Default sembunyi */
+                top: 50% !important; 
+                left: 50% !important;
+                right: auto;
+                transform: translate(-50%, -50%); /* Posisi tepat di tengah */
+                width: 85% !important; /* Lebar 85% layar */
+                max-width: 350px;
+                box-shadow: 0 0 0 1000px rgba(0,0,0,0.3); /* Efek gelapkan latar belakang */
+            }
+
+            /* 3. Class untuk Memunculkan Filter */
+            .filter-card.show-mobile {
+                display: block !important;
+                animation: fadeIn 0.2s ease-out;
+            }
+
+            /* Branding Card sedikit dirapikan */
+            .branding-card { width: auto !important; max-width: 70%; }
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, -45%); } to { opacity: 1; transform: translate(-50%, -50%); } }
     </style>
 </head>
 <body>
 
     <div class="floating-card branding-card">
         <div class="d-flex align-items-center">
-            <div class="bg-light rounded-circle d-flex justify-content-center align-items-center me-3" style="width:50px; height:50px; border:1px solid #ddd;">
-                <i class="fa fa-walking text-danger fa-lg"></i>
+            <div class="bg-light rounded-circle d-flex justify-content-center align-items-center me-3" style="width:70px; height:70px; border:1px solid #ddd;">
+                <img src="//kopeka-bali.vercel.app/img/logo_kopeka_bali.png" alt="Kopeka Logo" style="width:60px; height:60px;">
             </div>
             <div>
-                <h6 class="fw-bold m-0" style="color:#2c3e50;">Koalisi Pejalan Kaki</h6>
-                <small class="text-muted d-block" style="font-size:0.75rem; margin-bottom:4px;">Regional Bali</small>
+                <h6 class="fw-bold m-0" style="color:#2c3e50;">Kopeka Bali</h6>
+                <small class="text-muted d-block" style="font-size:0.75rem; margin-bottom:4px;">Koalisi Pejalan Kaki</small>
                 
                 <div>
                     <a href="https://kopeka-bali.vercel.app" target="_blank" class="brand-link">
@@ -127,9 +170,34 @@
         </div>
     </div>
 
+    <button class="btn btn-light shadow-sm mobile-filter-toggle" onclick="toggleFilter()">
+        <i class="fa fa-filter text-primary"></i> Filter
+    </button>
+
+    <div id="filterCard" class="floating-card filter-card">
+        
+        <div class="d-flex justify-content-between align-items-center mb-3 d-md-none">
+            <h6 class="fw-bold m-0">Filter Data</h6>
+            <button class="btn-close" onclick="toggleFilter()"></button>
+        </div>
+
+        <h6 class="fw-bold mb-3 d-none d-md-block"><i class="fa fa-filter"></i> Filter Wilayah</h6>
+        
+        <select id="selKecamatan" class="form-select form-select-sm mb-2" onchange="handleDistrictChange()">
+            <option value="all">Semua Kecamatan</option>
+        </select>
+        <select id="selDesa" class="form-select form-select-sm mb-2" onchange="applyFilter()">
+            <option value="all">Semua Desa</option>
+        </select>
+        <select id="selAuth" class="form-select form-select-sm" onchange="applyFilter()">
+            <option value="all">Semua Kewenangan</option>
+        </select>
+        <div class="text-center mt-2 small text-muted" id="totalCount">Loading...</div>
+    </div>
+
     <div class="floating-card filter-card">
         <div class="d-flex align-items-center mb-3">
-            <div class="bg-primary text-white rounded p-2 me-2"><i class="fa fa-map-marked-alt"></i></div>
+            <div class="bg-warning text-white rounded p-2 me-2"><i class="fa fa-map-marked-alt"></i></div>
             <div>
                 <h6 class="fw-bold m-0">Filter Wilayah</h6>
                 <small class="text-muted" style="font-size: 0.75rem">Data Ruas Jalan Kota Denpasar</small>
@@ -236,7 +304,7 @@
         </div>
     </div>
 
-    <button onclick="goToForm()" class="btn btn-danger fab-btn">
+    <button onclick="goToForm()" class="btn btn-warning fab-btn">
         <i class="fa-solid fa-camera me-1"></i> Lapor Kerusakan
     </button>
 
@@ -247,6 +315,17 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        // Fungsi Buka/Tutup Filter di Mobile
+        function toggleFilter() {
+            const card = document.getElementById('filterCard');
+            // Toggle class 'show-mobile'
+            if (card.classList.contains('show-mobile')) {
+                card.classList.remove('show-mobile');
+            } else {
+                card.classList.add('show-mobile');
+            }
+        }
+        
         // --- KONFIGURASI ---
         const SUPABASE_URL = 'https://rlsboveqzkrdcbohxnsi.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_OZYrnFcWViuxtMHo12cLjg_NbhUzdiF';
