@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peta Denpasar Walkability</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <style>
+        body, html { margin: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #f8f9fa; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
+        
+        /* Floating Cards UI */
+        .floating-card {
+            position: absolute; right: 20px; z-index: 1000;
+            background: rgba(255,255,255,0.98); padding: 20px; border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12); width: 300px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .filter-card { top: 20px; }
+        .legend-card { bottom: 100px; padding: 15px; width: auto; min-width: 150px; }
+
+        /* Custom Popup Styling */
+        .leaflet-popup-content-wrapper { border-radius: 12px; padding: 0; overflow: hidden; }
+        .leaflet-popup-content { margin: 0; width: 280px !important; }
+        
+        .popup-header {
+            background: #2c3e50; color: white; padding: 12px 15px;
+            border-bottom: 3px solid #34495e;
+        }
+        .popup-body { padding: 15px; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-item { 
+            background: #f8f9fa; border-radius: 8px; padding: 8px; text-align: center; 
+            border: 1px solid #e9ecef;
+        }
+        .stat-val { font-weight: bold; font-size: 1.1rem; display: block; }
+        .stat-label { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; }
+
+        .fab-btn {
+            position: absolute; bottom: 30px; right: 20px; z-index: 1000;
+            border-radius: 50px; padding: 12px 25px;
+            font-weight: bold; box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+            transition: all 0.3s ease;
+        }
+        .fab-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(231, 76, 60, 0.6); }
+    </style>
+</head>
+<body>
+
+    <div class="floating-card filter-card">
+        <div class="d-flex align-items-center mb-3">
+            <div class="bg-primary text-white rounded p-2 me-2"><i class="fa fa-map-marked-alt"></i></div>
+            <div>
+                <h6 class="fw-bold m-0">Filter Wilayah</h6>
+                <small class="text-muted" style="font-size: 0.75rem">Data Real-time</small>
+            </div>
+        </div>
+        
+        <div class="mb-2">
+            <label class="small fw-bold text-muted mb-1">Kecamatan</label>
+            <select id="selKecamatan" class="form-select form-select-sm shadow-none" onchange="handleDistrictChange()">
+                <option value="all">Semua Kecamatan</option>
+            </select>
+        </div>
+        <div class="mb-2">
+            <label class="small fw-bold text-muted mb-1">Desa / Kelurahan</label>
+            <select id="selDesa" class="form-select form-select-sm shadow-none" onchange="applyFilter()">
+                <option value="all">Semua Desa</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="small fw-bold text-muted mb-1">Kewenangan Jalan</label>
+            <select id="selAuth" class="form-select form-select-sm shadow-none" onchange="applyFilter()">
+                <option value="all">Semua Kewenangan</option>
+            </select>
+        </div>
+        
+        <div class="alert alert-light border text-center p-1 mb-0 small text-muted">
+            <i class="fa fa-road"></i> <span id="totalCount">Memuat data...</span>
+        </div>
+    </div>
+
+    <div class="floating-card legend-card d-none d-md-block">
+        <h6 class="fw-bold small mb-2 text-uppercase text-muted">Kondisi Jalan</h6>
+        <div class="d-flex align-items-center mb-1">
+            <span style="width:12px;height:12px;background:#2ecc71;border-radius:50%;margin-right:8px;"></span>
+            <small>Ramah (Aman)</small>
+        </div>
+        <div class="d-flex align-items-center mb-1">
+            <span style="width:12px;height:12px;background:#e74c3c;border-radius:50%;margin-right:8px;"></span>
+            <small>Bermasalah</small>
+        </div>
+        <div class="d-flex align-items-center">
+            <span style="width:12px;height:12px;background:#95a5a6;border-radius:50%;margin-right:8px;"></span>
+            <small>Belum Ada Data</small>
+        </div>
+    </div>
+
+    <button onclick="goToForm()" class="btn btn-danger fab-btn">
+        <i class="fa-solid fa-camera me-1"></i> Lapor Kerusakan
+    </button>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        // --- KONFIGURASI ---
+        const SUPABASE_URL = 'https://rlsboveqzkrdcbohxnsi.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_OZYrnFcWViuxtMHo12cLjg_NbhUzdiF';
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Init Map
+        const map = L.map('map', { zoomControl: false }).setView([-8.6500, 115.2167], 13);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+        // Variables
+        let rawGeoJSON = null; 
+        let geoJsonLayer = null; 
+        let selectedLayer = null; // Menyimpan layer yg sedang diklik (highlight)
+        
+        // Data Struktur untuk Chained Dropdown: { "Denpasar Timur": ["Sumerta", "Kesiman", ...], ... }
+        let districtHierarchy = {}; 
+
+        // FIX: Klik area kosong untuk reset highlight
+        map.on('click', function(e) {
+            if (selectedLayer) {
+                geoJsonLayer.resetStyle(selectedLayer);
+                selectedLayer = null;
+            }
+        });
+
+        // --- 1. LOGIKA PINDAH KE HALAMAN FORM ---
+        function goToForm() {
+            const btn = document.querySelector('.fab-btn');
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Mencari Lokasi...';
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    // Redirect ke file form dengan membawa data koordinat
+                    window.location.href = `form-lapor.html?lat=${lat}&lng=${lng}`;
+                }, (err) => {
+                    alert("Gagal mengambil lokasi GPS. Pastikan izin lokasi aktif.");
+                    window.location.href = `form-lapor.html`; // Tetap buka form meski tanpa GPS
+                });
+            } else {
+                window.location.href = `form-lapor.html`;
+            }
+        }
+
+        // --- LOAD DATA ---
+        async function initData() {
+            // 1. Load Jalan & Laporan
+            const { data } = await supabaseClient.from('api_ways_geojson').select('*').single();
+            const { data: reports } = await supabaseClient.from('api_reports_geojson').select('*').single();
+
+            if(data && data.row_to_json) {
+                // --- FILTER DATA BARU (Hanya ambil data di area Bali) ---
+                // Longitude Bali: ~115, Latitude Bali: ~-8
+                const cleanFeatures = data.row_to_json.features.filter(f => {
+                    if(!f.geometry || !f.geometry.coordinates) return false;
+                    
+                    // Cek satu titik sampel dari garis jalan
+                    // GeoJSON format: [Longitude, Latitude]
+                    // Kita ambil titik pertama [0]
+                    const firstPoint = f.geometry.coordinates[0]; 
+                    const lng = firstPoint[0];
+                    const lat = firstPoint[1];
+
+                    // Batas Kotak (Bounding Box) Denpasar/Bali Aman
+                    // Lng: 114 - 116, Lat: -8 sampai -9
+                    return (lng > 114 && lng < 116 && lat < -8 && lat > -9);
+                });
+
+                // Simpan data yang sudah bersih saja
+                rawGeoJSON = { type: "FeatureCollection", features: cleanFeatures };
+                
+                processHierarchy(rawGeoJSON.features); 
+                renderMap(rawGeoJSON.features, false); 
+            }
+
+            // Render Titik Laporan (Desain Baru: Evidence Card)
+            // Render Titik Laporan (Desain Final: Padding + Street Name)
+            if(reports && reports.row_to_json && reports.row_to_json.features) {
+                L.geoJSON(reports.row_to_json, {
+                    pointToLayer: function (feature, latlng) {
+                        return L.circleMarker(latlng, {
+                            radius: 4,
+                            fillColor: "#e74c3c",
+                            color: "#ffffff",
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.9
+                        });
+                    },
+                    onEachFeature: function(feature, layer) {
+                        const p = feature.properties;
+
+                        // 1. Logic Tanggal
+                        let dateStr = "Baru Saja";
+                        try {
+                            if (p.created_at) {
+                                const dateObj = new Date(p.created_at);
+                                if (!isNaN(dateObj.getTime())) {
+                                    dateStr = dateObj.toLocaleDateString('id-ID', { 
+                                        day: 'numeric', month: 'short', year: 'numeric',
+                                        hour: '2-digit', minute: '2-digit'
+                                    });
+                                }
+                            }
+                        } catch (e) { }
+
+                        // 2. Foto
+                        const imgSection = p.photo_url 
+                            ? `<div style="width:100%; height:160px; background: #f0f0f0 url('${p.photo_url}') no-repeat center center; background-size:cover; border-radius: 8px; margin-bottom:12px; border:1px solid #e0e0e0;"></div>` 
+                            : '';
+
+                        // 3. Nama Jalan (Otomatis dari Database)
+                        const lokasiJalan = p.nearest_street 
+                            ? `<i class="fa fa-road text-primary"></i> Sekitar ${p.nearest_street}`
+                            : `<i class="fa fa-map-marker-alt text-muted"></i> Lokasi Terpantau`;
+
+                        // 4. Template Popup (PADDING FIX)
+                        const popupContent = `
+                            <div style="font-family: 'Segoe UI', sans-serif; min-width:280px; padding: 35px 15px 15px 15px;">
+                                
+                                <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px; border-bottom:1px solid #eee; padding-bottom:8px;">
+                                    <div>
+                                        <span class="badge bg-danger" style="font-size: 0.85rem; padding: 6px 10px; margin-bottom: 6px; display: inline-block;">
+                                            <i class="fa fa-exclamation-triangle"></i> ${p.report_type || 'Laporan'}
+                                        </span>
+                                        <div style="font-weight:bold; font-size:0.9rem; color:#2c3e50;">
+                                            ${lokasiJalan}
+                                        </div>
+                                    </div>
+                                    <div style="color:#95a5a6; font-size:0.7rem; text-align:right; min-width:60px; padding-top:4px;">
+                                        ${dateStr}
+                                    </div>
+                                </div>
+
+                                ${imgSection}
+
+                                <div style="background:#f8f9fa; padding:12px; border-radius:8px; border-left: 4px solid #e74c3c; font-size:0.95rem; color:#444; line-height: 1.5; margin-bottom:12px; font-style:italic;">
+                                    "${p.description || 'Tidak ada deskripsi tambahan.'}"
+                                </div>
+
+                                <div style="text-align:right; border-top:1px solid #eee; padding-top:8px;">
+                                    <small style="color:#bdc3c7; font-size:0.7rem;">ID Laporan: ${p.id ? p.id.substring(0,8) : '-'}</small>
+                                </div>
+                            </div>
+                        `;
+                        
+                        layer.bindPopup(popupContent, { minWidth: 300, maxWidth: 320 });
+                    }
+                }).addTo(map);
+            }
+        }
+
+        // --- A. LOGIC CHAINED DROPDOWN ---
+        function processHierarchy(features) {
+            const authSet = new Set();
+
+            features.forEach(f => {
+                const p = f.properties;
+                const dist = p.district_name || 'Lainnya';
+                const region = p.region_name || 'Lainnya';
+                
+                // 1. Bangun Hierarchy Map
+                if (!districtHierarchy[dist]) {
+                    districtHierarchy[dist] = new Set();
+                }
+                districtHierarchy[dist].add(region);
+
+                // 2. Kumpulkan Authority
+                if(p.authority) authSet.add(p.authority);
+            });
+
+            // Populate District Dropdown
+            const selKec = document.getElementById('selKecamatan');
+            Object.keys(districtHierarchy).sort().forEach(d => {
+                let opt = new Option(d.toUpperCase(), d);
+                selKec.add(opt);
+            });
+
+            // Populate Authority Dropdown
+            const selAuth = document.getElementById('selAuth');
+            Array.from(authSet).sort().forEach(a => {
+                let opt = new Option(a.toUpperCase(), a);
+                selAuth.add(opt);
+            });
+        }
+
+        // Dipanggil saat Kecamatan berubah
+        function handleDistrictChange() {
+            const selectedDist = document.getElementById('selKecamatan').value;
+            const selDesa = document.getElementById('selDesa');
+            
+            // Reset Desa Dropdown
+            selDesa.innerHTML = '<option value="all">Semua Desa/Kelurahan</option>';
+
+            if (selectedDist !== 'all' && districtHierarchy[selectedDist]) {
+                // Isi Desa sesuai Kecamatan yg dipilih
+                Array.from(districtHierarchy[selectedDist]).sort().forEach(r => {
+                    let opt = new Option(r, r);
+                    selDesa.add(opt);
+                });
+            }
+            
+            // Apply filter peta juga
+            applyFilter();
+        }
+
+        // --- B. FILTERING MAP ---
+        function applyFilter() {
+            if(!rawGeoJSON) return;
+
+            const valKec = document.getElementById('selKecamatan').value;
+            const valDesa = document.getElementById('selDesa').value;
+            const valAuth = document.getElementById('selAuth').value;
+
+            const filtered = rawGeoJSON.features.filter(f => {
+                const p = f.properties;
+                const matchKec = (valKec === 'all') || (p.district_name === valKec);
+                const matchDesa = (valDesa === 'all') || (p.region_name === valDesa);
+                const matchAuth = (valAuth === 'all') || (p.authority === valAuth);
+                return matchKec && matchDesa && matchAuth;
+            });
+
+            // LOGIKA ZOOM PINTAR:
+            // Jika filter kembali ke "Semua", kita reset ke posisi default Denpasar.
+            // Jika sedang memfilter spesifik, baru kita auto-zoom (fitBounds).
+            if (valKec === 'all' && valDesa === 'all' && valAuth === 'all') {
+                renderMap(filtered, false); // Matikan auto zoom
+                map.setView([-8.6500, 115.2167], 13); // Reset manual ke tengah kota
+            } else {
+                renderMap(filtered, true); // Nyalakan auto zoom untuk filter spesifik
+            }
+        }
+
+        // --- C. RENDER & HIGHLIGHT LOGIC ---
+        function renderMap(features, autoZoom = false) {
+            if(geoJsonLayer) map.removeLayer(geoJsonLayer);
+
+            document.getElementById('totalCount').innerText = `${features.length} Ruas Jalan Ditampilkan`;
+
+            geoJsonLayer = L.geoJSON(features, {
+                style: styleFeature,
+                onEachFeature: onEachFeature
+            }).addTo(map);
+
+            // Logika Baru: Hanya zoom jika diminta (autoZoom = true) DAN ada datanya
+            if(autoZoom && features.length > 0) {
+                map.fitBounds(geoJsonLayer.getBounds());
+            }
+        }
+
+        // Fungsi Style Default
+        function styleFeature(feature) {
+            const score = feature.properties.walkability_index || 0;
+            const problems = feature.properties.total_problems || 0;
+            
+            let color = '#95a5a6'; // Abu
+            if (problems > 0 && score <= 0) color = '#e74c3c'; // Merah
+            else if (score > 0) color = '#2ecc71'; // Hijau
+
+            return { color: color, weight: 4, opacity: 0.7 };
+        }
+
+        // Fungsi Interaksi (Click & Highlight)
+        function onEachFeature(feature, layer) {
+            layer.on({
+                click: function(e) {
+                    // PENTING: Mencegah klik tembus ke peta (agar tidak langsung kereset)
+                    L.DomEvent.stopPropagation(e); 
+
+                    // 1. Reset Highlight layer sebelumnya
+                    if (selectedLayer) {
+                        geoJsonLayer.resetStyle(selectedLayer);
+                    }
+
+                    // 2. Set Highlight layer yg diklik
+                    selectedLayer = e.target;
+                    e.target.setStyle({
+                        color: '#00d2ff', // Cyan terang
+                        weight: 8,
+                        opacity: 1
+                    });
+                    
+                    e.target.bringToFront();
+                }
+            });
+
+            const p = feature.properties;
+            const score = p.walkability_index || 0;
+            const isBad = score < 0;
+            const headerColor = isBad ? '#e74c3c' : '#2ecc71'; // Merah atau Hijau
+            const statusText = isBad ? 'TIDAK RAMAH' : 'RAMAH PEJALAN';
+
+            // Template HTML Popup "Card Style"
+            const popupContent = `
+                <div style="font-family: 'Segoe UI', sans-serif;">
+                    
+                    <div style="background: ${headerColor}; color: white; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+                        <h6 style="margin:0; font-weight:800; text-transform:uppercase; letter-spacing:1px; font-size: 0.8rem;">${statusText}</h6>
+                        <div style="font-size: 2.5rem; font-weight: bold; line-height: 1;">${score}</div>
+                        <small style="opacity: 0.9">Walkability Score</small>
+                    </div>
+
+                    <div style="padding: 15px; background: white;">
+                        <h6 style="font-weight: bold; margin-bottom: 5px; color: #2c3e50;">${p.street_name || 'Jalan Tanpa Nama'}</h6>
+                        <div style="font-size: 0.8rem; color: #7f8c8d; margin-bottom: 15px;">
+                            <i class="fa fa-map-marker-alt"></i> ${p.region_name || '-'}, ${p.district_name || '-'}
+                            <br>
+                            <span class="badge bg-light text-dark border mt-1">${p.authority || 'Non-Status'}</span>
+                        </div>
+
+                        <div class="row g-2 text-center mb-3">
+                            <div class="col-6">
+                                <div class="p-2 border rounded bg-light">
+                                    <i class="fa fa-tree text-success mb-1" style="font-size:1.2rem"></i>
+                                    <div style="font-weight:bold; font-size:1.1rem">${p.total_amenities}</div>
+                                    <small class="text-muted" style="font-size:0.7rem">Fasilitas</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 border rounded bg-light">
+                                    <i class="fa fa-exclamation-triangle text-danger mb-1" style="font-size:1.2rem"></i>
+                                    <div style="font-weight:bold; font-size:1.1rem">${p.total_problems}</div>
+                                    <small class="text-muted" style="font-size:0.7rem">Masalah</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <a onclick="goToForm()" class="btn btn-outline-danger btn-sm w-100" style="border-radius: 50px; font-weight:600;">
+                            <i class="fa fa-camera"></i> Lapor Kondisi
+                        </a>
+                    </div>
+                </div>
+            `;
+            
+            // Setting lebar popup agar pas
+            layer.bindPopup(popupContent, { minWidth: 280, maxWidth: 300 });
+        }
+
+        initData();
+    </script>
+</body>
+</html>

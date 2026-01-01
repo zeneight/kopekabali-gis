@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Laporan Warga</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+        .form-container { max-width: 500px; margin: 30px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .header-img { text-align: center; margin-bottom: 20px; }
+        .header-img i { font-size: 3rem; color: #e74c3c; background: #fadbd8; padding: 20px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="form-container">
+            <div class="header-img">
+                <i class="fa fa-camera"></i>
+                <h4 class="mt-3 fw-bold">Lapor Kerusakan</h4>
+                <p class="text-muted small">Bantu kami menciptakan jalan yang lebih nyaman.</p>
+            </div>
+
+            <form id="formLapor">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Masalah Apa?</label>
+                    <select class="form-select" id="inpType" required>
+                        <option value="" selected disabled>Pilih Kategori...</option>
+                        <option value="Trotoar Lubang">Trotoar Berlubang</option>
+                        <option value="Halangan">Halangan (Tiang/Pohon)</option>
+                        <option value="Parkir Liar">Parkir Liar</option>
+                        <option value="Minim Fasilitas">Gelap / Tidak Aman</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Keterangan</label>
+                    <textarea class="form-control" id="inpDesc" rows="3" placeholder="Ceritakan detail lokasinya..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Foto Bukti</label>
+                    <input type="file" class="form-control" id="inpPhoto" accept="image/*" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Titik Lokasi</label>
+                    <input type="text" class="form-control bg-light" id="inpCoordDisplay" readonly>
+                    <input type="hidden" id="latVal">
+                    <input type="hidden" id="lngVal">
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-danger btn-lg" id="btnSubmit">Kirim Laporan</button>
+                    <a href="index.html" class="btn btn-outline-secondary">Batal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // --- KONFIGURASI ---
+        const SUPABASE_URL = 'https://rlsboveqzkrdcbohxnsi.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_OZYrnFcWViuxtMHo12cLjg_NbhUzdiF'; 
+        const BUCKET_NAME  = 'photos'; 
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // 1. Ambil Parameter URL saat halaman dibuka
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const lat = urlParams.get('lat');
+            const lng = urlParams.get('lng');
+
+            if(lat && lng) {
+                document.getElementById('latVal').value = lat;
+                document.getElementById('lngVal').value = lng;
+                document.getElementById('inpCoordDisplay').value = `${lat}, ${lng}`;
+            } else {
+                document.getElementById('inpCoordDisplay').value = "Lokasi tidak terdeteksi";
+                Swal.fire('Ups', 'Lokasi GPS tidak ditemukan. Mohon kembali ke peta.', 'warning');
+            }
+        }
+
+        // 2. Handle Submit
+        document.getElementById('formLapor').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmit');
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Mengirim...';
+            btn.disabled = true;
+
+            try {
+                // Upload Foto
+                const file = document.getElementById('inpPhoto').files[0];
+                const fileName = `${Date.now()}.${file.name.split('.').pop()}`;
+                const { error: uploadError } = await supabaseClient.storage.from(BUCKET_NAME).upload(fileName, file);
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabaseClient.storage.from(BUCKET_NAME).getPublicUrl(fileName);
+
+                // Insert Data
+                const { error: insertError } = await supabaseClient.from('reports').insert({
+                    report_type: document.getElementById('inpType').value,
+                    description: document.getElementById('inpDesc').value,
+                    photo_url: publicUrl,
+                    latitude: document.getElementById('latVal').value,
+                    longitude: document.getElementById('lngVal').value,
+                    status: 'Baru'
+                });
+
+                if (insertError) throw insertError;
+
+                // Sukses
+                await Swal.fire('Terkirim!', 'Laporan Anda berhasil disimpan.', 'success');
+                window.location.href = 'index.html'; // Balik ke peta
+
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Gagal', err.message, 'error');
+                btn.innerHTML = 'Kirim Laporan';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
