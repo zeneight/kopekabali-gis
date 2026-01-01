@@ -140,7 +140,7 @@
         // --- 1. LOGIKA PINDAH KE HALAMAN FORM ---
         function goToForm() {
             const btn = document.querySelector('.fab-btn');
-            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Mencari Lokasi...';
+            // btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Mencari Lokasi...';
             
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition((pos) => {
