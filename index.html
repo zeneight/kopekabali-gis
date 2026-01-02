@@ -12,6 +12,14 @@
     <style>
         body, html { margin: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #f8f9fa; }
         #map { height: 100vh; width: 100%; z-index: 1; }
+
+        .popup-card-body {
+            padding: 12px;
+        }
+
+        .popup-hero-img {
+            width: 100%; height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; border:1px solid #e0e0e0;
+        }
         
         /* --- 1. BASE FLOATING CARD (Gaya Visual Saja) --- */
         /* Kita hapus 'right' dan 'width' dari sini agar fleksibel */
@@ -317,10 +325,10 @@
         let geoJsonLayer = null; 
         let selectedLayer = null; // Menyimpan layer yg sedang diklik (highlight)
         
-        // Data Struktur untuk Chained Dropdown: { "Denpasar Timur": ["Sumerta", "Kesiman", ...], ... }
+        // Data Struktur untuk Chained Dropdown }
         let districtHierarchy = {}; 
 
-        // FIX: Klik area kosong untuk reset highlight
+        // Klik area kosong untuk reset highlight
         map.on('click', function(e) {
             if (selectedLayer) {
                 geoJsonLayer.resetStyle(selectedLayer);
@@ -355,6 +363,7 @@
             const { data: reports } = await supabaseClient.from('api_reports_geojson').select('*').single();
 
             if(data && data.row_to_json) {
+                // console.log("CONTOH DATA:", data.row_to_json.features[0].properties);
                 // --- FILTER DATA BARU (Hanya ambil data di area Bali) ---
                 // Longitude Bali: ~115, Latitude Bali: ~-8
                 const cleanFeatures = data.row_to_json.features.filter(f => {
@@ -379,13 +388,79 @@
                 renderMap(rawGeoJSON.features, false); 
             }
 
-            // Render Titik Laporan (Desain Baru: Evidence Card)
-            // Render Titik Laporan (Desain Final: Padding + Street Name)
+            // --- LOAD AMENITIES (FASILITAS) ---
+            const { data: amenitiesData } = await supabaseClient.from('api_amenities_geojson').select('*').single();
+            
+            if(amenitiesData && amenitiesData.row_to_json) {
+                L.geoJSON(amenitiesData.row_to_json, {
+                    
+                    // 1. GANTI STYLE TITIK (Lingkaran Biru)
+                    pointToLayer: (feature, latlng) => {
+                        return L.circleMarker(latlng, {
+                            radius: 6,              // Ukuran sedikit lebih kecil dari masalah
+                            fillColor: "#3498db",   // WARNA BIRU (Khas Fasilitas)
+                            color: "#fff",          // Garis tepi putih
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+                    },
+
+                    // 2. Popup Card UI (Versi Biru)
+                    onEachFeature: (feature, layer) => {
+                        const p = feature.properties;
+                        
+                        // Icon Logic
+                        let icon = 'fa-check';
+                        if(p.amenity_type.includes('Lampu')) icon = 'fa-lightbulb';
+                        if(p.amenity_type.includes('Kursi')) icon = 'fa-chair';
+                        if(p.amenity_type.includes('Pohon') || p.amenity_type.includes('Taman')) icon = 'fa-tree';
+                        if(p.amenity_type.includes('Ramp')) icon = 'fa-wheelchair';
+
+                        // Gambar Default (Jika kosong, pakai gambar ilustrasi kota/taman)
+                        // Tips: Anda bisa ganti URL ini dengan gambar placeholder aset pemkot
+                        const defaultImg = 'https://images.unsplash.com/photo-1519331379826-fda8feb0c1f1?auto=format&fit=crop&w=300&q=80'; 
+                        const imgUrl = p.photo_url || defaultImg;
+
+                        const popupContent = `
+                            <div>
+                                <div style="position:relative">
+                                    <img src="${imgUrl}" class="popup-hero-img" alt="Fasilitas">
+                                    
+                                    <span class="badge bg-primary" style="position:absolute; bottom:10px; left:10px; opacity:0.95; font-size:0.85rem">
+                                        <i class="fa ${icon} me-1"></i> ${p.amenity_type}
+                                    </span>
+                                </div>
+
+                                <div class="popup-card-body">
+                                    <h5 class="fw-bold mb-2" style="color:#2c3e50;">${p.name || 'Fasilitas Umum'}</h5>
+                                    <p style="margin:0; font-size:0.95rem; color:#333; line-height:1.5">
+                                        "${p.description || 'Fasilitas umum tersedia di lokasi ini.'}"
+                                    </p>
+                                    
+                                    <div class="reporter-info" style="border-top: 1px solid #e1f5fe;padding:10px 0;">
+                                        <div style="flex-grow:1; color:#0288d1; font-weight:600; font-size:0.8rem;">
+                                            <i class="fa fa-check-circle me-1"></i>Pemerintah Kota / Provinsi
+                                        </div>
+                                        <div class="text-muted small">
+                                            ID Fasilitas: ${p.id ? p.id.substring(0,8) : '-'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        layer.bindPopup(popupContent);
+                    }
+                }).addTo(map);
+            }
+
+            // Render Titik Laporan
             if(reports && reports.row_to_json && reports.row_to_json.features) {
                 L.geoJSON(reports.row_to_json, {
                     pointToLayer: function (feature, latlng) {
                         return L.circleMarker(latlng, {
-                            radius: 4,
+                            radius: 6,
                             fillColor: "#e74c3c",
                             color: "#ffffff",
                             weight: 2,
@@ -420,7 +495,7 @@
                             ? `<i class="fa fa-road text-primary"></i> Sekitar ${p.nearest_street}`
                             : `<i class="fa fa-map-marker-alt text-muted"></i> Lokasi Terpantau`;
 
-                        // 4. Template Popup (PADDING FIX)
+                        // 4. Template Popup
                         const popupContent = `
                             <div style="font-family: 'Segoe UI', sans-serif; min-width:280px; padding: 35px 15px 15px 15px;">
                                 
@@ -592,9 +667,23 @@
 
             const p = feature.properties;
             const score = p.walkability_index || 0;
-            const isBad = score < 0;
-            const headerColor = isBad ? '#e74c3c' : '#2ecc71'; // Merah atau Hijau
-            const statusText = isBad ? 'TIDAK RAMAH' : 'RAMAH PEJALAN';
+            // const isBad = score < 0;
+            // const headerColor = isBad ? '#e74c3c' : '#2ecc71'; // Merah atau Hijau
+            // const statusText = isBad ? 'TIDAK RAMAH' : 'RAMAH PEJALAN';
+
+            let headerColor, statusText;
+
+            // LOGIKA 3 KONDISI
+            if (score < 0) {
+                headerColor = '#e74c3c'; 
+                statusText = 'TIDAK RAMAH';
+            } else if (score > 0) {
+                headerColor = '#2ecc71'; 
+                statusText = 'RAMAH PEJALAN';
+            } else {
+                headerColor = '#7f8c8d'; // Gray
+                statusText = 'NETRAL';
+            }
 
             // Template HTML Popup "Card Style"
             const popupContent = `
