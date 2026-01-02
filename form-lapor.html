@@ -25,6 +25,17 @@
             </div>
 
             <form id="formLapor">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold small">Nama Anda</label>
+                        <input type="text" class="form-control" id="inpName" placeholder="Boleh samaran" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold small">No. WA / Email</label>
+                        <input type="text" class="form-control" id="inpContact" placeholder="Opsional">
+                    </div>
+                    <div class="form-text small text-muted">Kami butuh kontak untuk konfirmasi jika perlu.</div>
+                </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold">Masalah Apa?</label>
                     <select class="form-select" id="inpType" required>
@@ -109,13 +120,20 @@
                     photo_url: publicUrl,
                     latitude: document.getElementById('latVal').value,
                     longitude: document.getElementById('lngVal').value,
-                    status: 'Baru'
+                    reporter_name: document.getElementById('inpName').value,
+                    reporter_contact: document.getElementById('inpContact').value,
+                    status: 'Pending'
                 });
 
                 if (insertError) throw insertError;
 
                 // Sukses
-                await Swal.fire('Terkirim!', 'Laporan Anda berhasil disimpan.', 'success');
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Laporan Diterima!',
+                    text: 'Terima kasih. Laporan Anda akan diverifikasi admin sebelum tampil di peta.',
+                    confirmButtonText: 'Siap'
+                });
                 window.location.href = 'index.html'; // Balik ke peta
 
             } catch (err) {
