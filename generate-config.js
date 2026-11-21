@@ -21,10 +21,10 @@ if (fs.existsSync(envPath)) {
 
 // 2. Prioritaskan process.env (untuk Vercel / CI/CD) lalu fallback ke .env lokal
 const finalConfig = {
-    SUPABASE_URL: process.env.SUPABASE_URL || envVars.SUPABASE_URL || '',
-    SUPABASE_KEY: process.env.SUPABASE_KEY || envVars.SUPABASE_KEY || '',
+    SUPABASE_URL: process.env.SUPABASE_URL || envVars.SUPABASE_URL || 'https://rlsboveqzkrdcbohxnsi.supabase.co',
+    SUPABASE_KEY: process.env.SUPABASE_KEY || envVars.SUPABASE_KEY || 'sb_publishable_OZYrnFcWViuxtMHo12cLjg_NbhUzdiF',
     BASEMAP_URL: process.env.BASEMAP_URL || envVars.BASEMAP_URL || 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    BASEMAP_API_KEY: process.env.BASEMAP_API_KEY || envVars.BASEMAP_API_KEY || ''
+    BASEMAP_API_KEY: process.env.BASEMAP_API_KEY || envVars.BASEMAP_API_KEY || 'cb1_30fe_1_143028887eece1f45792790a'
 };
 
 const output = `// File ini di-generate otomatis dari .env — JANGAN di-commit ke repository publik\nwindow.APP_CONFIG = ${JSON.stringify(finalConfig, null, 4)};\n`;
