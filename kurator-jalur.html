@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kurator Jalur Mobilitas Aktif — Kopeka Bali</title>
+    <title>Kurator Jalur & Area Publik — Kopeka Bali</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
@@ -16,7 +16,7 @@
 
         .sidebar-card {
             position: absolute; top: 16px; right: 16px; z-index: 1000;
-            width: 360px; max-height: calc(100vh - 32px); overflow-y: auto;
+            width: 365px; max-height: calc(100vh - 32px); overflow-y: auto;
             background: rgba(255,255,255,0.97); backdrop-filter: blur(6px);
             border-radius: 12px; padding: 16px;
             box-shadow: 0 8px 30px rgba(0,0,0,0.15); border: 1px solid #e2e8f0;
@@ -29,6 +29,9 @@
         .stat-pill {
             background: #f0fdfa; border: 1px solid #99f6e4; color: #0f766e;
             border-radius: 8px; padding: 8px 12px; font-size: 0.82rem; font-weight: 700;
+        }
+        .stat-pill.area-mode {
+            background: #f0fdf4; border-color: #86efac; color: #166534;
         }
         @media (max-width: 768px) {
             .sidebar-card {
@@ -44,100 +47,137 @@
     <div class="top-nav-pill">
         <a href="index.html" class="text-warning text-decoration-none fw-bold"><i class="fa fa-arrow-left"></i> Peta Utama</a>
         <span class="text-white-50">|</span>
-        <span class="fw-bold small">Kurator Trotoar & Jalur Aktif</span>
+        <span class="fw-bold small">Kurator Jalur & Area Publik</span>
     </div>
 
     <div class="sidebar-card">
-        <h6 class="fw-bold mb-1 text-dark"><i class="fa fa-route text-success me-1"></i> Tambah Segmen Trotoar / Jalur</h6>
-        <p class="small text-muted mb-2">Gambar trotoar di masing-masing sisi jalan secara terpisah, lalu hubungkan dengan segmen <strong>Penyeberangan</strong> jika tersedia zebra cross.</p>
+        <h6 class="fw-bold mb-1 text-dark"><i class="fa fa-draw-polygon text-success me-1"></i> Gambar Jalur atau Area Publik</h6>
+        <p class="small text-muted mb-2">
+            Pilih ikon <strong>Garis</strong> di kiri peta untuk trotoar/jalur sepeda, atau ikon <strong>Poligon</strong> untuk area taman & ruang publik.
+        </p>
 
         <div class="mb-3">
             <label class="btn btn-outline-secondary btn-sm w-100 fw-semibold">
-                <i class="fa fa-file-upload me-1"></i> Impor Rekaman GPX / GeoJSON
+                <i class="fa fa-file-upload me-1"></i> Impor File GPX / GeoJSON
                 <input type="file" id="fileImport" accept=".gpx,.geojson,.json" hidden onchange="handleFileImport(this)">
             </label>
         </div>
 
-        <div class="stat-pill d-flex justify-content-between align-items-center mb-3">
-            <span><i class="fa fa-ruler-horizontal me-1"></i> Panjang Segmen:</span>
-            <span id="lengthBadge">0 meter (Belum digambar)</span>
+        <div id="statBox" class="stat-pill d-flex justify-content-between align-items-center mb-3">
+            <span id="statLabel"><i class="fa fa-ruler-horizontal me-1"></i> Ukuran Geometri:</span>
+            <span id="measureBadge">Belum digambar</span>
         </div>
 
-        <form id="pathForm" onsubmit="saveActivePath(event)">
-            <div class="mb-2">
-                <label class="small fw-bold text-muted">Nama Jalur / Ruas Trotoar *</label>
-                <input type="text" id="pathName" class="form-control form-control-sm" required placeholder="Contoh: Trotoar Jl. Gajah Mada (Sisi Utara)">
+        <form id="spatialForm" onsubmit="saveSpatialData(event)">
+            
+            <!-- FORM UNTUK GARIS (Tabel: active_mobility_paths) -->
+            <div id="lineFields">
+                <div class="mb-2">
+                    <label class="small fw-bold text-muted">Nama Jalur / Ruas Trotoar *</label>
+                    <input type="text" id="pathName" class="form-control form-control-sm" placeholder="Contoh: Trotoar Jl. Gajah Mada (Sisi Utara)">
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="small fw-bold text-muted">Tipe Segmen *</label>
+                        <select id="pathType" class="form-select form-select-sm" onchange="handleTypeChange()">
+                            <option value="Trotoar Jalan">Trotoar Jalan</option>
+                            <option value="Penyeberangan (Zebra Cross / Pelican)">Penyeberangan (Zebra Cross)</option>
+                            <option value="Shared Path (Jalan Kaki & Sepeda)">Shared Path (Kaki & Sepeda)</option>
+                            <option value="Jalur Pejalan Kaki">Jalur Khusus Pejalan Kaki</option>
+                            <option value="Jalur Sepeda Terproteksi">Jalur Sepeda Terproteksi</option>
+                            <option value="Jogging Track / Taman">Jogging Track / Taman</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="small fw-bold text-muted">Posisi / Sisi *</label>
+                        <select id="pathSide" class="form-select form-select-sm">
+                            <option value="Sisi Kiri">Sisi Kiri Jalan</option>
+                            <option value="Sisi Kanan">Sisi Kanan Jalan</option>
+                            <option value="Penyeberangan">Penyeberangan Antar-Sisi</option>
+                            <option value="Tengah / Bebas Kendaraan">Tengah / Bebas Kendaraan</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-4">
+                        <label class="small fw-bold text-muted">Permukaan</label>
+                        <select id="pathSurface" class="form-select form-select-sm">
+                            <option value="Paving">Paving</option>
+                            <option value="Aspal">Aspal</option>
+                            <option value="Beton">Beton</option>
+                            <option value="Keramik / Batu">Keramik / Batu</option>
+                            <option value="Gravel / Tanah">Gravel / Tanah</option>
+                        </select>
+                    </div>
+                    <div class="col-3">
+                        <label class="small fw-bold text-muted">Lebar (m)</label>
+                        <input type="number" step="0.5" min="0.5" max="20" id="pathWidth" class="form-control form-control-sm" value="2.0">
+                    </div>
+                    <div class="col-5">
+                        <label class="small fw-bold text-muted">Kecamatan</label>
+                        <input type="text" id="pathDistrict" class="form-control form-control-sm" placeholder="Denpasar Barat">
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="small fw-bold text-muted">Desa / Kelurahan</label>
+                    <input type="text" id="pathRegion" class="form-control form-control-sm" placeholder="Contoh: Pemecutan">
+                </div>
+
+                <div class="d-flex gap-3 my-2">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="chkWheelchair" checked>
+                        <label class="form-check-label small" for="chkWheelchair">Ramah Kursi Roda</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="chkLighting" checked>
+                        <label class="form-check-label small" for="chkLighting">Ada Lampu</label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted">Catatan Aksesibilitas</label>
+                    <textarea id="pathNotes" class="form-control form-control-sm" rows="2" placeholder="Keterangan ramp, hambatan, atau kondisi jalur..."></textarea>
+                </div>
             </div>
 
-            <div class="row g-2 mb-2">
-                <div class="col-6">
-                    <label class="small fw-bold text-muted">Tipe Segmen *</label>
-                    <select id="pathType" class="form-select form-select-sm" onchange="handleTypeChange()">
-                        <option value="Trotoar Jalan">Trotoar Jalan</option>
-                        <option value="Penyeberangan (Zebra Cross / Pelican)">Penyeberangan (Zebra Cross)</option>
-                        <option value="Shared Path (Jalan Kaki & Sepeda)">Shared Path (Kaki & Sepeda)</option>
-                        <option value="Jalur Pejalan Kaki">Jalur Khusus Pejalan Kaki</option>
-                        <option value="Jalur Sepeda Terproteksi">Jalur Sepeda Terproteksi</option>
-                        <option value="Jogging Track / Taman">Jogging Track / Taman</option>
-                    </select>
+            <!-- FORM UNTUK AREA POLIGON (Tabel: amenities) -->
+            <div id="polygonFields" style="display:none;">
+                <div class="mb-2">
+                    <label class="small fw-bold text-muted">Nama Taman / Ruang Publik *</label>
+                    <input type="text" id="areaName" class="form-control form-control-sm" placeholder="Contoh: Taman Kota Lumintang / Alun-alun">
                 </div>
-                <div class="col-6">
-                    <label class="small fw-bold text-muted">Posisi / Sisi *</label>
-                    <select id="pathSide" class="form-select form-select-sm">
-                        <option value="Sisi Kiri">Sisi Kiri Jalan</option>
-                        <option value="Sisi Kanan">Sisi Kanan Jalan</option>
-                        <option value="Penyeberangan">Penyeberangan Antar-Sisi</option>
-                        <option value="Tengah / Bebas Kendaraan">Tengah / Bebas Kendaraan</option>
-                    </select>
+                <div class="row g-2 mb-2">
+                    <div class="col-7">
+                        <label class="small fw-bold text-muted">Kategori Ruang Publik *</label>
+                        <select id="areaType" class="form-select form-select-sm">
+                            <option value="Taman Kota / Ruang Terbuka Hijau">Taman Kota / RTH</option>
+                            <option value="Lapangan / Alun-alun Publik">Lapangan / Alun-alun</option>
+                            <option value="Zona Ramah Pejalan Kaki / Plaza">Zona Pejalan Kaki</option>
+                            <option value="Area Parkir Sepeda / Transit Hub">Area Transit / Parkir Sepeda</option>
+                        </select>
+                    </div>
+                    <div class="col-5">
+                        <label class="small fw-bold text-muted">Kondisi</label>
+                        <select id="areaCondition" class="form-select form-select-sm">
+                            <option value="Baik" selected>Baik</option>
+                            <option value="Perlu Perbaikan">Perlu Perbaikan</option>
+                            <option value="Rusak">Rusak</option>
+                        </select>
+                    </div>
                 </div>
-            </div>
-
-            <div class="row g-2 mb-2">
-                <div class="col-4">
-                    <label class="small fw-bold text-muted">Permukaan</label>
-                    <select id="pathSurface" class="form-select form-select-sm">
-                        <option value="Paving">Paving</option>
-                        <option value="Aspal">Aspal</option>
-                        <option value="Beton">Beton</option>
-                        <option value="Keramik / Batu">Keramik / Batu</option>
-                        <option value="Gravel / Tanah">Gravel / Tanah</option>
-                    </select>
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted">Deskripsi Fasilitas & Akses</label>
+                    <textarea id="areaDesc" class="form-control form-control-sm" rows="3" placeholder="Jelaskan fasilitas di dalam area (jalur jalan kaki, pohon peneduh, bangku, akses masuk)..."></textarea>
                 </div>
-                <div class="col-3">
-                    <label class="small fw-bold text-muted">Lebar (m)</label>
-                    <input type="number" step="0.5" min="0.5" max="20" id="pathWidth" class="form-control form-control-sm" value="2.0">
-                </div>
-                <div class="col-5">
-                    <label class="small fw-bold text-muted">Kecamatan</label>
-                    <input type="text" id="pathDistrict" class="form-control form-control-sm" placeholder="Denpasar Barat">
-                </div>
-            </div>
-
-            <div class="mb-2">
-                <label class="small fw-bold text-muted">Desa / Kelurahan</label>
-                <input type="text" id="pathRegion" class="form-control form-control-sm" placeholder="Contoh: Pemecutan">
-            </div>
-
-            <div class="d-flex gap-3 my-2">
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="chkWheelchair" checked>
-                    <label class="form-check-label small" for="chkWheelchair">Ramah Kursi Roda</label>
-                </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="chkLighting" checked>
-                    <label class="form-check-label small" for="chkLighting">Ada Lampu</label>
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="small fw-bold text-muted">Catatan Aksesibilitas</label>
-                <textarea id="pathNotes" class="form-control form-control-sm" rows="2" placeholder="Contoh: Ramp tersedia di ujung barat, ujung timur terputus oleh saluran air..."></textarea>
             </div>
 
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearDrawnPath()">Reset Garis</button>
-                <button type="submit" id="btnSavePath" class="btn btn-success btn-sm flex-grow-1 fw-bold">
-                    <i class="fa fa-save me-1"></i> Simpan Segmen
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearDrawnGeometry()">Reset</button>
+                <button type="submit" id="btnSaveSpatial" class="btn btn-success btn-sm flex-grow-1 fw-bold">
+                    <i class="fa fa-save me-1"></i> Simpan ke Database
                 </button>
             </div>
         </form>
@@ -166,7 +206,8 @@
         }).addTo(map);
 
         const drawnItems = new L.FeatureGroup().addTo(map);
-        let activeCoords = [];
+        let activeGeomType = null; // 'polyline' | 'polygon'
+        let activeCoords = [];     // Format [lng, lat]
 
         const drawControl = new L.Control.Draw({
             position: 'topleft',
@@ -174,7 +215,10 @@
                 polyline: {
                     shapeOptions: { color: '#0d9488', weight: 6 }
                 },
-                polygon: false,
+                polygon: {
+                    allowIntersection: false,
+                    shapeOptions: { color: '#15803d', weight: 3, fillColor: '#22c55e', fillOpacity: 0.25 }
+                },
                 circle: false,
                 rectangle: false,
                 marker: false,
@@ -187,7 +231,22 @@
         });
         map.addControl(drawControl);
 
-        // Sinkronisasi otomatis dropdown sisi jika memilih tipe Penyeberangan
+        function setEditorMode(geomType) {
+            activeGeomType = geomType;
+            const statBox = document.getElementById('statBox');
+            if (geomType === 'polygon') {
+                document.getElementById('lineFields').style.display = 'none';
+                document.getElementById('polygonFields').style.display = 'block';
+                document.getElementById('statLabel').innerHTML = '<i class="fa fa-vector-square me-1"></i> Luas Area:';
+                statBox.classList.add('area-mode');
+            } else {
+                document.getElementById('lineFields').style.display = 'block';
+                document.getElementById('polygonFields').style.display = 'none';
+                document.getElementById('statLabel').innerHTML = '<i class="fa fa-ruler-horizontal me-1"></i> Panjang Segmen:';
+                statBox.classList.remove('area-mode');
+            }
+        }
+
         function handleTypeChange() {
             const typeVal = document.getElementById('pathType').value;
             const sideSelect = document.getElementById('pathSide');
@@ -200,11 +259,14 @@
             }
         }
 
-        // Muat segmen yang sudah ada agar kurator bisa menghubungkan ujung trotoar & zebra cross secara presisi
-        async function loadExistingPaths() {
-            const { data } = await supabaseClient.from('api_active_paths_geojson').select('*').single();
-            if (data?.row_to_json?.features) {
-                L.geoJSON(data.row_to_json, {
+        async function loadExistingGeometries() {
+            const [pathsRes, amenRes] = await Promise.allSettled([
+                supabaseClient.from('api_active_paths_geojson').select('*').single(),
+                supabaseClient.from('api_amenities_geojson').select('*').single()
+            ]);
+
+            if (pathsRes.status === 'fulfilled' && pathsRes.value.data?.row_to_json?.features) {
+                L.geoJSON(pathsRes.value.data.row_to_json, {
                     style: (f) => {
                         const isCrossing = f.properties.side === 'Penyeberangan' || (f.properties.path_type || '').includes('Penyeberangan');
                         return {
@@ -217,27 +279,51 @@
                     onEachFeature: (f, layer) => layer.bindTooltip(`${f.properties.name} (${f.properties.side || '-'})`)
                 }).addTo(map);
             }
+
+            if (amenRes.status === 'fulfilled' && amenRes.value.data?.row_to_json?.features) {
+                const polygonsOnly = amenRes.value.data.row_to_json.features.filter(
+                    f => f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')
+                );
+                L.geoJSON(polygonsOnly, {
+                    style: { color: '#2563eb', weight: 2, dashArray: '4,4', fillColor: '#3b82f6', fillOpacity: 0.12 },
+                    onEachFeature: (f, layer) => layer.bindTooltip(`Area: ${f.properties.name}`)
+                }).addTo(map);
+            }
         }
-        loadExistingPaths();
+        loadExistingGeometries();
 
         map.on(L.Draw.Event.CREATED, (e) => {
             drawnItems.clearLayers();
             const layer = e.layer;
             drawnItems.addLayer(layer);
-            handleTypeChange();
-            syncCoordsFromLayer(layer);
+
+            if (e.layerType === 'polygon') {
+                setEditorMode('polygon');
+                syncPolygonCoords(layer);
+            } else {
+                setEditorMode('polyline');
+                handleTypeChange();
+                syncPolylineCoords(layer);
+            }
         });
 
         map.on(L.Draw.Event.EDITED, (e) => {
-            e.layers.eachLayer((layer) => syncCoordsFromLayer(layer));
+            e.layers.eachLayer((layer) => {
+                if (layer instanceof L.Polygon) {
+                    setEditorMode('polygon');
+                    syncPolygonCoords(layer);
+                } else if (layer instanceof L.Polyline) {
+                    setEditorMode('polyline');
+                    syncPolylineCoords(layer);
+                }
+            });
         });
 
         map.on(L.Draw.Event.DELETED, () => {
-            activeCoords = [];
-            document.getElementById('lengthBadge').innerText = '0 meter (Belum digambar)';
+            clearDrawnGeometry();
         });
 
-        function syncCoordsFromLayer(layer) {
+        function syncPolylineCoords(layer) {
             const latlngs = layer.getLatLngs();
             activeCoords = latlngs.map(ll => [ll.lng, ll.lat]);
 
@@ -245,13 +331,41 @@
             for (let i = 1; i < latlngs.length; i++) {
                 totalMeters += latlngs[i - 1].distanceTo(latlngs[i]);
             }
-            document.getElementById('lengthBadge').innerText = `${Math.round(totalMeters)} meter (${latlngs.length} titik)`;
+            document.getElementById('measureBadge').innerText = `${Math.round(totalMeters)} meter (${latlngs.length} titik)`;
         }
 
-        function clearDrawnPath() {
+        function syncPolygonCoords(layer) {
+            const ring = layer.getLatLngs()[0] || [];
+            activeCoords = ring.map(ll => [ll.lng, ll.lat]);
+
+            const areaSqM = L.GeometryUtil ? L.GeometryUtil.geodesicArea(ring) : computeGeodesicArea(ring);
+            const label = areaSqM >= 10000
+                ? `${(areaSqM / 10000).toFixed(2)} ha (${Math.round(areaSqM)} m²)`
+                : `${Math.round(areaSqM)} m²`;
+            document.getElementById('measureBadge').innerText = label;
+        }
+
+        function computeGeodesicArea(latLngs) {
+            const pointsCount = latLngs.length;
+            let area = 0.0;
+            const d2r = Math.PI / 180;
+            const earthRadius = 6378137;
+            if (pointsCount > 2) {
+                for (let i = 0; i < pointsCount; i++) {
+                    const p1 = latLngs[i];
+                    const p2 = latLngs[(i + 1) % pointsCount];
+                    area += ((p2.lng - p1.lng) * d2r) * (2 + Math.sin(p1.lat * d2r) + Math.sin(p2.lat * d2r));
+                }
+                area = area * earthRadius * earthRadius / 2.0;
+            }
+            return Math.abs(area);
+        }
+
+        function clearDrawnGeometry() {
             drawnItems.clearLayers();
+            activeGeomType = null;
             activeCoords = [];
-            document.getElementById('lengthBadge').innerText = '0 meter (Belum digambar)';
+            document.getElementById('measureBadge').innerText = 'Belum digambar';
         }
 
         function handleFileImport(input) {
@@ -261,75 +375,119 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 const text = e.target.result;
-                let latlngs = [];
 
                 if (file.name.toLowerCase().endsWith('.gpx')) {
                     const parser = new DOMParser();
                     const xml = parser.parseFromString(text, 'text/xml');
+                    const latlngs = [];
                     xml.querySelectorAll('trkpt, rtept').forEach(pt => {
                         const lat = parseFloat(pt.getAttribute('lat'));
                         const lon = parseFloat(pt.getAttribute('lon'));
                         if (!isNaN(lat) && !isNaN(lon)) latlngs.push([lat, lon]);
                     });
-                } else {
-                    const json = JSON.parse(text);
-                    const feature = json.type === 'FeatureCollection' ? json.features[0] : (json.type === 'Feature' ? json : { geometry: json });
-                    if (feature?.geometry?.type === 'LineString') {
-                        latlngs = feature.geometry.coordinates.map(c => [c[1], c[0]]);
-                    } else if (feature?.geometry?.type === 'MultiLineString') {
-                        latlngs = feature.geometry.coordinates[0].map(c => [c[1], c[0]]);
-                    }
-                }
+                    if (latlngs.length < 2) return alert('File GPX tidak valid.');
 
-                if (latlngs.length < 2) {
-                    alert('File tidak mengandung garis koordinat yang valid.');
+                    drawnItems.clearLayers();
+                    const poly = L.polyline(latlngs, { color: '#0d9488', weight: 6 }).addTo(drawnItems);
+                    map.fitBounds(poly.getBounds());
+                    setEditorMode('polyline');
+                    syncPolylineCoords(poly);
                     return;
                 }
 
+                const json = JSON.parse(text);
+                const feature = json.type === 'FeatureCollection' ? json.features[0] : (json.type === 'Feature' ? json : { geometry: json });
+                const geom = feature?.geometry;
+                if (!geom) return alert('GeoJSON tidak mengandung geometri valid.');
+
                 drawnItems.clearLayers();
-                const polyline = L.polyline(latlngs, { color: '#0d9488', weight: 6 }).addTo(drawnItems);
-                map.fitBounds(polyline.getBounds());
-                syncCoordsFromLayer(polyline);
+
+                if (geom.type === 'Polygon' || geom.type === 'MultiPolygon') {
+                    const rawRing = geom.type === 'Polygon' ? geom.coordinates[0] : geom.coordinates[0][0];
+                    const latlngs = rawRing.map(c => [c[1], c[0]]);
+                    const polygon = L.polygon(latlngs, { color: '#15803d', weight: 3, fillColor: '#22c55e', fillOpacity: 0.25 }).addTo(drawnItems);
+                    map.fitBounds(polygon.getBounds());
+                    setEditorMode('polygon');
+                    syncPolygonCoords(polygon);
+                } else if (geom.type === 'LineString' || geom.type === 'MultiLineString') {
+                    const rawLine = geom.type === 'LineString' ? geom.coordinates : geom.coordinates[0];
+                    const latlngs = rawLine.map(c => [c[1], c[0]]);
+                    const polyline = L.polyline(latlngs, { color: '#0d9488', weight: 6 }).addTo(drawnItems);
+                    map.fitBounds(polyline.getBounds());
+                    setEditorMode('polyline');
+                    syncPolylineCoords(polyline);
+                } else {
+                    alert('Tipe geometri tidak didukung. Gunakan LineString atau Polygon.');
+                }
             };
             reader.readAsText(file);
         }
 
-        async function saveActivePath(e) {
+        async function saveSpatialData(e) {
             e.preventDefault();
-            if (activeCoords.length < 2) {
-                alert('Silakan gambar jalur di peta atau impor file GPX/GeoJSON terlebih dahulu.');
+            if (!activeGeomType || activeCoords.length < 2) {
+                alert('Silakan gambar garis jalur atau area poligon di peta terlebih dahulu.');
                 return;
             }
 
-            const btn = document.getElementById('btnSavePath');
+            const btn = document.getElementById('btnSaveSpatial');
             btn.disabled = true;
             btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Menyimpan...';
 
-            const wktLine = `SRID=4326;LINESTRING(${activeCoords.map(c => `${c[0]} ${c[1]}`).join(', ')})`;
-
             try {
-                const { error } = await supabaseClient.from('active_mobility_paths').insert([{
-                    name: document.getElementById('pathName').value.trim(),
-                    path_type: document.getElementById('pathType').value,
-                    side: document.getElementById('pathSide').value,
-                    surface: document.getElementById('pathSurface').value,
-                    width_m: parseFloat(document.getElementById('pathWidth').value) || null,
-                    district_name: document.getElementById('pathDistrict').value.trim() || null,
-                    region_name: document.getElementById('pathRegion').value.trim() || null,
-                    is_wheelchair_friendly: document.getElementById('chkWheelchair').checked,
-                    has_lighting: document.getElementById('chkLighting').checked,
-                    notes: document.getElementById('pathNotes').value.trim() || null,
-                    geom: wktLine
-                }]);
+                if (activeGeomType === 'polygon') {
+                    if (activeCoords.length < 3) throw new Error('Area poligon minimal membutuhkan 3 titik sudut.');
+                    const areaName = document.getElementById('areaName').value.trim();
+                    if (!areaName) throw new Error('Mohon isi nama taman atau ruang publik.');
 
-                if (error) throw error;
+                    const closedRing = [...activeCoords];
+                    const first = closedRing[0];
+                    const last = closedRing[closedRing.length - 1];
+                    if (first[0] !== last[0] || first[1] !== last[1]) {
+                        closedRing.push([first[0], first[1]]);
+                    }
 
-                alert('Segmen jalur berhasil disimpan!');
+                    const wktPolygon = `SRID=4326;POLYGON((${closedRing.map(c => `${c[0]} ${c[1]}`).join(', ')}))`;
+
+                    const { error } = await supabaseClient.from('amenities').insert([{
+                        name: areaName,
+                        type: document.getElementById('areaType').value,
+                        condition: document.getElementById('areaCondition').value,
+                        description: document.getElementById('areaDesc').value.trim() || null,
+                        location: wktPolygon
+                    }]);
+                    if (error) throw error;
+
+                    alert('Area taman / ruang publik berhasil disimpan!');
+                } else {
+                    const pathName = document.getElementById('pathName').value.trim();
+                    if (!pathName) throw new Error('Mohon isi nama jalur atau ruas trotoar.');
+
+                    const wktLine = `SRID=4326;LINESTRING(${activeCoords.map(c => `${c[0]} ${c[1]}`).join(', ')})`;
+
+                    const { error } = await supabaseClient.from('active_mobility_paths').insert([{
+                        name: pathName,
+                        path_type: document.getElementById('pathType').value,
+                        side: document.getElementById('pathSide').value,
+                        surface: document.getElementById('pathSurface').value,
+                        width_m: parseFloat(document.getElementById('pathWidth').value) || null,
+                        district_name: document.getElementById('pathDistrict').value.trim() || null,
+                        region_name: document.getElementById('pathRegion').value.trim() || null,
+                        is_wheelchair_friendly: document.getElementById('chkWheelchair').checked,
+                        has_lighting: document.getElementById('chkLighting').checked,
+                        notes: document.getElementById('pathNotes').value.trim() || null,
+                        geom: wktLine
+                    }]);
+                    if (error) throw error;
+
+                    alert('Segmen jalur berhasil disimpan!');
+                }
+
                 window.location.href = 'index.html';
             } catch (err) {
-                alert('Gagal menyimpan jalur: ' + err.message);
+                alert('Gagal menyimpan: ' + err.message);
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa fa-save me-1"></i> Simpan Segmen';
+                btn.innerHTML = '<i class="fa fa-save me-1"></i> Simpan ke Database';
             }
         }
     </script>

@@ -52,19 +52,19 @@
         <div class="d-flex align-items-center gap-2">
             <a href="index.html" class="btn btn-sm btn-outline-light rounded-circle"><i class="fa fa-arrow-left"></i></a>
             <div>
-                <h6 class="m-0 fw-bold">Input Data Lapangan</h6>
+                <h6 class="m-0 fw-bold">Input Titik Lapangan</h6>
                 <small class="text-white-50" style="font-size:0.72rem;">Kopeka Bali — Audit Partisipatif</small>
             </div>
         </div>
         <a href="kurator-jalur.html" class="btn btn-sm btn-warning fw-bold" style="font-size:0.75rem;">
-            <i class="fa fa-route"></i> Gambar Jalur
+            <i class="fa fa-draw-polygon"></i> Jalur / Area
         </a>
     </div>
 
     <div class="form-container">
 
         <div class="card-clean">
-            <label class="small fw-bold text-muted text-uppercase mb-2 d-block">1. Pilih Kategori Input</label>
+            <label class="small fw-bold text-muted text-uppercase mb-2 d-block">1. Pilih Kategori Input Titik</label>
             <div class="mode-grid">
                 <div class="mode-btn active-report" id="btnModeReport" onclick="switchMode('report')">
                     <i class="fa fa-exclamation-triangle text-danger"></i>
@@ -98,35 +98,45 @@
         <form id="fieldForm" class="card-clean" onsubmit="handleSubmit(event)">
             <label class="small fw-bold text-muted text-uppercase mb-2 d-block">3. Detail Observasi</label>
 
-            <!-- A. FIELDS KENDALA -->
+            <!-- A. FIELDS KENDALA (Tabel: reports) -->
             <div id="sectionReport">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Jenis Kendala *</label>
-                    <select id="repType" class="form-select form-select-sm">
-                        <option value="Trotoar Rusak / Berlubang">Trotoar Rusak / Berlubang</option>
-                        <option value="Trotoar Terputus / Buntu">Trotoar Terputus / Buntu</option>
-                        <option value="Tidak Ada Zebra Cross">Tidak Ada Zebra Cross</option>
-                        <option value="Parkir Liar di Trotoar">Parkir Liar di Trotoar</option>
-                        <option value="Pedagang / Barang Menghalangi Jalur">Pedagang / Barang Menghalangi Jalur</option>
-                        <option value="Tidak Ada Trotoar">Tidak Ada Trotoar</option>
-                        <option value="Tiang / Kabel Menghalangi">Tiang / Kabel Menghalangi</option>
-                        <option value="Tidak Ada Ramp Disabilitas">Tidak Ada Ramp Disabilitas</option>
-                        <option value="Zebra Cross Pudar / Tidak Aman">Zebra Cross Pudar / Tidak Aman</option>
-                        <option value="Lampu Penerangan Mati">Lampu Penerangan Mati</option>
-                        <option value="Lainnya">Kendala Lainnya</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Nama Ruas Jalan Terdekat</label>
-                    <input type="text" id="repStreet" class="form-control form-control-sm" placeholder="Contoh: Jl. Gajah Mada">
+                <div class="row g-2 mb-3">
+                    <div class="col-8">
+                        <label class="form-label small fw-bold">Jenis Kendala *</label>
+                        <select id="repType" class="form-select form-select-sm">
+                            <option value="Trotoar Rusak / Berlubang">Trotoar Rusak / Berlubang</option>
+                            <option value="Trotoar Terputus / Buntu">Trotoar Terputus / Buntu</option>
+                            <option value="Tidak Ada Zebra Cross">Tidak Ada Zebra Cross</option>
+                            <option value="Parkir Liar di Trotoar">Parkir Liar di Trotoar</option>
+                            <option value="Pedagang / Barang Menghalangi Jalur">Pedagang / Barang Menghalangi Jalur</option>
+                            <option value="Tidak Ada Trotoar">Tidak Ada Trotoar</option>
+                            <option value="Tiang / Kabel Menghalangi">Tiang / Kabel Menghalangi</option>
+                            <option value="Tidak Ada Ramp Disabilitas">Tidak Ada Ramp Disabilitas</option>
+                            <option value="Zebra Cross Pudar / Tidak Aman">Zebra Cross Pudar / Tidak Aman</option>
+                            <option value="Lampu Penerangan Mati">Lampu Penerangan Mati</option>
+                            <option value="Lainnya">Kendala Lainnya</option>
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small fw-bold">Keparahan</label>
+                        <select id="repSeverity" class="form-select form-select-sm">
+                            <option value="1">1 - Ringan</option>
+                            <option value="2" selected>2 - Sedang</option>
+                            <option value="3">3 - Berat</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Keterangan Kondisi *</label>
-                    <textarea id="repDesc" class="form-control form-control-sm" rows="3" placeholder="Jelaskan kondisi lapangan secara singkat..."></textarea>
+                    <textarea id="repDesc" class="form-control form-control-sm" rows="3" placeholder="Jelaskan kondisi lapangan secara singkat (misal: trotoar berlubang sedalam 20 cm di depan toko)..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Nama Pelapor (Opsional)</label>
+                    <input type="text" id="repReporter" class="form-control form-control-sm" placeholder="Anonim / Nama Komunitas">
                 </div>
             </div>
 
-            <!-- B. FIELDS POHON PENEDUH -->
+            <!-- B. FIELDS POHON PENEDUH (Tabel: trees) -->
             <div id="sectionTree" style="display:none;">
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Jenis / Spesies Pohon *</label>
@@ -143,7 +153,7 @@
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <label class="form-label small fw-bold">Lebar Tajuk (meter)</label>
+                        <label class="form-label small fw-bold">Diameter Kanopi (meter)</label>
                         <input type="number" step="0.5" min="0.5" max="30" id="treeCanopy" class="form-control form-control-sm" value="4.0">
                     </div>
                     <div class="col-6">
@@ -176,20 +186,30 @@
                 </div>
             </div>
 
-            <!-- C. FIELDS FASILITAS / POI -->
+            <!-- C. FIELDS FASILITAS / POI (Tabel: amenities) -->
             <div id="sectionAmenity" style="display:none;">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Jenis Fasilitas / POI *</label>
-                    <select id="amenType" class="form-select form-select-sm">
-                        <option value="Halte Bus / Trans Metro">Halte Bus / Trans Metro</option>
-                        <option value="Pelican / Zebra Cross">Pelican / Zebra Cross</option>
-                        <option value="Ramp Kursi Roda">Ramp Kursi Roda</option>
-                        <option value="Guiding Block (Ubin Pemandu)">Guiding Block (Ubin Pemandu)</option>
-                        <option value="Rak Parkir Sepeda">Rak Parkir Sepeda</option>
-                        <option value="Bangku Taman / Istirahat">Bangku Taman / Istirahat</option>
-                        <option value="Lampu Penerangan Jalan">Lampu Penerangan Jalan</option>
-                        <option value="Titik Air Minum / Toilet Umum">Titik Air Minum / Toilet Umum</option>
-                    </select>
+                <div class="row g-2 mb-3">
+                    <div class="col-7">
+                        <label class="form-label small fw-bold">Jenis Fasilitas / POI *</label>
+                        <select id="amenType" class="form-select form-select-sm">
+                            <option value="Halte Bus / Trans Metro">Halte Bus / Trans Metro</option>
+                            <option value="Pelican / Zebra Cross">Pelican / Zebra Cross</option>
+                            <option value="Ramp Kursi Roda">Ramp Kursi Roda</option>
+                            <option value="Guiding Block (Ubin Pemandu)">Guiding Block (Ubin Pemandu)</option>
+                            <option value="Rak Parkir Sepeda">Rak Parkir Sepeda</option>
+                            <option value="Bangku Taman / Istirahat">Bangku Taman / Istirahat</option>
+                            <option value="Lampu Penerangan Jalan">Lampu Penerangan Jalan</option>
+                            <option value="Titik Air Minum / Toilet Umum">Titik Air Minum / Toilet Umum</option>
+                        </select>
+                    </div>
+                    <div class="col-5">
+                        <label class="form-label small fw-bold">Kondisi</label>
+                        <select id="amenCondition" class="form-select form-select-sm">
+                            <option value="Baik" selected>Baik</option>
+                            <option value="Perlu Perbaikan">Perlu Perbaikan</option>
+                            <option value="Rusak">Rusak</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Nama Lokasi / Titik *</label>
@@ -334,7 +354,7 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Menyimpan...';
 
-            const geomWKT = `SRID=4326;POINT(${currentLng} ${currentLat})`;
+            const pointWKT = `SRID=4326;POINT(${currentLng} ${currentLat})`;
             const photoFile = document.getElementById('photoInput').files[0];
 
             try {
@@ -345,10 +365,13 @@
                     const photoUrl = await compressAndUploadPhoto(photoFile, 'reports');
                     const { error } = await supabaseClient.from('reports').insert([{
                         report_type: document.getElementById('repType').value,
-                        nearest_street: document.getElementById('repStreet').value.trim() || null,
                         description: desc,
+                        severity: parseInt(document.getElementById('repSeverity').value, 10) || 2,
                         photo_url: photoUrl,
-                        geom: geomWKT
+                        location: pointWKT,
+                        latitude: String(currentLat),
+                        longitude: String(currentLng),
+                        reporter_name: document.getElementById('repReporter').value.trim() || 'Warga'
                     }]);
                     if (error) throw error;
 
@@ -365,7 +388,7 @@
                         health_status: document.getElementById('treeHealth').value,
                         recorded_by: document.getElementById('treeRecorder').value.trim() || 'Komunitas',
                         photo_url: photoUrl,
-                        geom: geomWKT
+                        geom: pointWKT
                     }]);
                     if (error) throw error;
 
@@ -375,11 +398,12 @@
 
                     const photoUrl = await compressAndUploadPhoto(photoFile, 'amenities');
                     const { error } = await supabaseClient.from('amenities').insert([{
-                        amenity_type: document.getElementById('amenType').value,
                         name: name,
+                        type: document.getElementById('amenType').value,
+                        condition: document.getElementById('amenCondition').value,
                         description: document.getElementById('amenDesc').value.trim() || null,
                         photo_url: photoUrl,
-                        geom: geomWKT
+                        location: pointWKT
                     }]);
                     if (error) throw error;
                 }
