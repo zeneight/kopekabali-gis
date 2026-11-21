@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kurator Jalur Mobilitas Aktif — Kopeka Bali</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <style>
+        body, html { margin: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
+
+        .sidebar-card {
+            position: absolute; top: 16px; right: 16px; z-index: 1000;
+            width: 350px; max-height: calc(100vh - 32px); overflow-y: auto;
+            background: rgba(255,255,255,0.97); backdrop-filter: blur(6px);
+            border-radius: 12px; padding: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15); border: 1px solid #e2e8f0;
+        }
+        .top-nav-pill {
+            position: absolute; top: 16px; left: 60px; z-index: 1000;
+            background: #1e293b; color: #fff; padding: 8px 16px; border-radius: 50px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 10px;
+        }
+        .stat-pill {
+            background: #f0fdfa; border: 1px solid #99f6e4; color: #0f766e;
+            border-radius: 8px; padding: 8px 12px; font-size: 0.82rem; font-weight: 700;
+        }
+        @media (max-width: 768px) {
+            .sidebar-card {
+                top: auto; bottom: 0; left: 0; right: 0; width: 100%;
+                max-height: 52vh; border-radius: 16px 16px 0 0;
+            }
+            .top-nav-pill { left: 54px; right: 12px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-nav-pill">
+        <a href="index.html" class="text-warning text-decoration-none fw-bold"><i class="fa fa-arrow-left"></i> Peta Utama</a>
+        <span class="text-white-50">|</span>
+        <span class="fw-bold small">Kurator Jalur Pejalan Kaki & Sepeda</span>
+    </div>
+
+    <div class="sidebar-card">
+        <h6 class="fw-bold mb-1 text-dark"><i class="fa fa-route text-success me-1"></i> Tambah Jalur Mobilitas Aktif</h6>
+        <p class="small text-muted mb-2">Gunakan ikon garis (<i class="fa fa-minus"></i>) di kiri peta untuk menggambar, atau unggah GPX/GeoJSON.</p>
+
+        <!-- Impor File GPX / GeoJSON -->
+        <div class="mb-3">
+            <label class="btn btn-outline-secondary btn-sm w-100 fw-semibold">
+                <i class="fa fa-file-upload me-1"></i> Impor Rekaman GPX / GeoJSON
+                <input type="file" id="fileImport" accept=".gpx,.geojson,.json" hidden onchange="handleFileImport(this)">
+            </label>
+        </div>
+
+        <div class="stat-pill d-flex justify-content-between align-items-center mb-3">
+            <span><i class="fa fa-ruler-horizontal me-1"></i> Panjang Segmen:</span>
+            <span id="lengthBadge">0 meter (Belum digambar)</span>
+        </div>
+
+        <form id="pathForm" onsubmit="saveActivePath(event)">
+            <div class="mb-2">
+                <label class="small fw-bold text-muted">Nama Jalur / Koridor *</label>
+                <input type="text" id="pathName" class="form-control form-control-sm" required placeholder="Contoh: Jalur Pesisir Pantai Karang - Mertasari">
+            </div>
+
+            <div class="row g-2 mb-2">
+                <div class="col-7">
+                    <label class="small fw-bold text-muted">Tipe Jalur *</label>
+                    <select id="pathType" class="form-select form-select-sm">
+                        <option value="Shared Path (Jalan Kaki & Sepeda)">Shared Path (Jalan Kaki & Sepeda)</option>
+                        <option value="Jalur Pejalan Kaki">Khusus Pejalan Kaki</option>
+                        <option value="Jalur Sepeda Terproteksi">Jalur Sepeda Terproteksi</option>
+                        <option value="Jogging Track / Taman">Jogging Track / Taman</option>
+                    </select>
+                </div>
+                <div class="col-5">
+                    <label class="small fw-bold text-muted">Permukaan</label>
+                    <select id="pathSurface" class="form-select form-select-sm">
+                        <option value="Paving">Paving</option>
+                        <option value="Aspal">Aspal</option>
+                        <option value="Beton">Beton</option>
+                        <option value="Gravel / Tanah">Gravel / Tanah</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-2 mb-2">
+                <div class="col-4">
+                    <label class="small fw-bold text-muted">Lebar (m)</label>
+                    <input type="number" step="0.5" min="0.5" max="20" id="pathWidth" class="form-control form-control-sm" value="2.5">
+                </div>
+                <div class="col-4">
+                    <label class="small fw-bold text-muted">Kecamatan</label>
+                    <input type="text" id="pathDistrict" class="form-control form-control-sm" placeholder="Denpasar Selatan">
+                </div>
+                <div class="col-4">
+                    <label class="small fw-bold text-muted">Desa/Kel.</label>
+                    <input type="text" id="pathRegion" class="form-control form-control-sm" placeholder="Sanur">
+                </div>
+            </div>
+
+            <div class="d-flex gap-3 my-2">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="chkWheelchair" checked>
+                    <label class="form-check-label small" for="chkWheelchair">Ramah Kursi Roda</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="chkLighting" checked>
+                    <label class="form-check-label small" for="chkLighting">Ada Lampu</label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="small fw-bold text-muted">Catatan Jalur</label>
+                <textarea id="pathNotes" class="form-control form-control-sm" rows="2" placeholder="Keterangan akses masuk, portal motor, keteduhan, dll..."></textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearDrawnPath()">Reset Garis</button>
+                <button type="submit" id="btnSavePath" class="btn btn-success btn-sm flex-grow-1 fw-bold">
+                    <i class="fa fa-save me-1"></i> Simpan Jalur ke Database
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://rlsboveqzkrdcbohxnsi.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_OZYrnFcWViuxtMHo12cLjg_NbhUzdiF';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const map = L.map('map').setView([-8.6500, 115.2167], 14);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }).addTo(map);
+
+        // Layer penampung garis yang sedang digambar/diedit
+        const drawnItems = new L.FeatureGroup().addTo(map);
+        let activeCoords = []; // Format [lng, lat]
+
+        // Toolbar Leaflet.draw (hanya aktifkan Polyline)
+        const drawControl = new L.Control.Draw({
+            position: 'topleft',
+            draw: {
+                polyline: {
+                    shapeOptions: { color: '#0d9488', weight: 6 }
+                },
+                polygon: false,
+                circle: false,
+                rectangle: false,
+                marker: false,
+                circlemarker: false
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+        map.addControl(drawControl);
+
+        // Muat jalur yang sudah ada agar kurator tidak menggambar ulang segmen yang sama
+        async function loadExistingPaths() {
+            const { data } = await supabaseClient.from('api_active_paths_geojson').select('*').single();
+            if (data?.row_to_json?.features) {
+                L.geoJSON(data.row_to_json, {
+                    style: { color: '#94a3b8', weight: 4, dashArray: '6,6', opacity: 0.7 },
+                    onEachFeature: (f, layer) => layer.bindTooltip(`Sudah ada: ${f.properties.name}`)
+                }).addTo(map);
+            }
+        }
+        loadExistingPaths();
+
+        // Event saat selesai menggambar polyline
+        map.on(L.Draw.Event.CREATED, (e) => {
+            drawnItems.clearLayers();
+            const layer = e.layer;
+            drawnItems.addLayer(layer);
+            syncCoordsFromLayer(layer);
+        });
+
+        // Event saat titik garis diedit
+        map.on(L.Draw.Event.EDITED, (e) => {
+            e.layers.eachLayer((layer) => syncCoordsFromLayer(layer));
+        });
+
+        map.on(L.Draw.Event.DELETED, () => {
+            activeCoords = [];
+            document.getElementById('lengthBadge').innerText = '0 meter (Belum digambar)';
+        });
+
+        function syncCoordsFromLayer(layer) {
+            const latlngs = layer.getLatLngs();
+            activeCoords = latlngs.map(ll => [ll.lng, ll.lat]);
+
+            // Hitung total panjang garis dalam meter
+            let totalMeters = 0;
+            for (let i = 1; i < latlngs.length; i++) {
+                totalMeters += latlngs[i - 1].distanceTo(latlngs[i]);
+            }
+            document.getElementById('lengthBadge').innerText = `${Math.round(totalMeters)} meter (${latlngs.length} titik)`;
+        }
+
+        function clearDrawnPath() {
+            drawnItems.clearLayers();
+            activeCoords = [];
+            document.getElementById('lengthBadge').innerText = '0 meter (Belum digambar)';
+        }
+
+        // Impor file GPX atau GeoJSON hasil rekaman GPS
+        function handleFileImport(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                let latlngs = [];
+
+                if (file.name.toLowerCase().endsWith('.gpx')) {
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(text, 'text/xml');
+                    const pts = xml.querySelectorAll('trkpt, rtept');
+                    pts.forEach(pt => {
+                        const lat = parseFloat(pt.getAttribute('lat'));
+                        const lon = parseFloat(pt.getAttribute('lon'));
+                        if (!isNaN(lat) && !isNaN(lon)) latlngs.push([lat, lon]);
+                    });
+                } else {
+                    const json = JSON.parse(text);
+                    const feature = json.type === 'FeatureCollection' ? json.features[0] : (json.type === 'Feature' ? json : { geometry: json });
+                    if (feature?.geometry?.type === 'LineString') {
+                        latlngs = feature.geometry.coordinates.map(c => [c[1], c[0]]);
+                    } else if (feature?.geometry?.type === 'MultiLineString') {
+                        latlngs = feature.geometry.coordinates[0].map(c => [c[1], c[0]]);
+                    }
+                }
+
+                if (latlngs.length < 2) {
+                    alert('File tidak mengandung garis koordinat yang valid.');
+                    return;
+                }
+
+                drawnItems.clearLayers();
+                const polyline = L.polyline(latlngs, { color: '#0d9488', weight: 6 }).addTo(drawnItems);
+                map.fitBounds(polyline.getBounds());
+                syncCoordsFromLayer(polyline);
+            };
+            reader.readAsText(file);
+        }
+
+        async function saveActivePath(e) {
+            e.preventDefault();
+            if (activeCoords.length < 2) {
+                alert('Silakan gambar jalur di peta atau impor file GPX/GeoJSON terlebih dahulu.');
+                return;
+            }
+
+            const btn = document.getElementById('btnSavePath');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Menyimpan...';
+
+            const wktLine = `SRID=4326;LINESTRING(${activeCoords.map(c => `${c[0]} ${c[1]}`).join(', ')})`;
+
+            try {
+                const { error } = await supabaseClient.from('active_mobility_paths').insert([{
+                    name: document.getElementById('pathName').value.trim(),
+                    path_type: document.getElementById('pathType').value,
+                    surface: document.getElementById('pathSurface').value,
+                    width_m: parseFloat(document.getElementById('pathWidth').value) || null,
+                    district_name: document.getElementById('pathDistrict').value.trim() || null,
+                    region_name: document.getElementById('pathRegion').value.trim() || null,
+                    is_wheelchair_friendly: document.getElementById('chkWheelchair').checked,
+                    has_lighting: document.getElementById('chkLighting').checked,
+                    notes: document.getElementById('pathNotes').value.trim() || null,
+                    geom: wktLine
+                }]);
+
+                if (error) throw error;
+
+                alert('Jalur mobilitas aktif berhasil disimpan!');
+                window.location.href = 'index.html';
+            } catch (err) {
+                alert('Gagal menyimpan jalur: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-save me-1"></i> Simpan Jalur ke Database';
+            }
+        }
+    </script>
+</body>
+</html>

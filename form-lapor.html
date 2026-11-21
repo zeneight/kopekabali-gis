@@ -3,146 +3,403 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Form Laporan Warga</title>
+    <title>Input Data Lapangan — Kopeka Bali</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style>
-        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
-        .form-container { max-width: 500px; margin: 30px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-        .header-img { text-align: center; margin-bottom: 20px; }
-        .header-img i { font-size: 3rem; color: #e74c3c; background: #fadbd8; padding: 20px; border-radius: 50%; }
+        body { background: #f1f5f9; font-family: 'Segoe UI', system-ui, sans-serif; padding-bottom: 40px; }
+        .app-header {
+            background: #1e293b; color: #fff; padding: 14px 16px;
+            border-bottom: 4px solid #fbf316; position: sticky; top: 0; z-index: 1020;
+        }
+        .form-container { max-width: 560px; margin: 16px auto; padding: 0 12px; }
+        .card-clean {
+            background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.04); padding: 16px; margin-bottom: 14px;
+        }
+        #miniMap { height: 220px; width: 100%; border-radius: 10px; border: 1px solid #cbd5e1; z-index: 1; }
+        
+        /* Mode Selector Tabs */
+        .mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .mode-btn {
+            border: 1.5px solid #e2e8f0; background: #fff; border-radius: 10px;
+            padding: 10px 6px; text-align: center; cursor: pointer; transition: all 0.15s;
+        }
+        .mode-btn i { font-size: 1.2rem; display: block; margin-bottom: 4px; }
+        .mode-btn span { font-size: 0.78rem; font-weight: 700; display: block; line-height: 1.2; }
+        .mode-btn.active-report { border-color: #dc2626; background: #fef2f2; color: #991b1b; }
+        .mode-btn.active-tree   { border-color: #16a34a; background: #f0fdf4; color: #166534; }
+        .mode-btn.active-amenity{ border-color: #2563eb; background: #eff6ff; color: #1e40af; }
+
+        /* Quick Species Chips */
+        .chip-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+        .species-chip {
+            font-size: 0.74rem; padding: 3px 10px; border-radius: 20px;
+            background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; cursor: pointer;
+        }
+        .species-chip:hover { background: #dcfce7; border-color: #16a34a; color: #166534; }
+
+        #photoPreview {
+            width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px;
+            display: none; margin-top: 10px; border: 1px solid #cbd5e1;
+        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="form-container">
-            <div class="header-img">
-                <i class="fa fa-camera"></i>
-                <h4 class="mt-3 fw-bold">Lapor Kerusakan</h4>
-                <p class="text-muted small">Bantu kami menciptakan jalan yang lebih nyaman.</p>
+    <div class="app-header d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <a href="index.html" class="btn btn-sm btn-outline-light rounded-circle"><i class="fa fa-arrow-left"></i></a>
+            <div>
+                <h6 class="m-0 fw-bold">Input Data Lapangan</h6>
+                <small class="text-white-50" style="font-size:0.72rem;">Kopeka Bali — Audit Partisipatif</small>
             </div>
-
-            <form id="formLapor">
-                <div class="row mb-3">
-                    <div class="col-6">
-                        <label class="form-label fw-bold small">Nama Anda</label>
-                        <input type="text" class="form-control" id="inpName" placeholder="Boleh samaran" required>
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label fw-bold small">No. WA / Email</label>
-                        <input type="text" class="form-control" id="inpContact" placeholder="Opsional">
-                    </div>
-                    <div class="form-text small text-muted">Kami butuh kontak untuk konfirmasi jika perlu.</div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Masalah Apa?</label>
-                    <select class="form-select" id="inpType" required>
-                        <option value="" selected disabled>Pilih Kategori...</option>
-                        <option value="Trotoar Lubang">Trotoar Berlubang</option>
-                        <option value="Halangan">Halangan (Tiang/Pohon)</option>
-                        <option value="Parkir Liar">Parkir Liar</option>
-                        <option value="Minim Fasilitas">Gelap / Tidak Aman</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Keterangan</label>
-                    <textarea class="form-control" id="inpDesc" rows="3" placeholder="Ceritakan detail lokasinya..."></textarea>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Foto Bukti</label>
-                    <input type="file" class="form-control" id="inpPhoto" accept="image/*" required>
-                </div>
-
-                <div class="mb-4">
-                    <label class="form-label fw-bold">Titik Lokasi</label>
-                    <input type="text" class="form-control bg-light" id="inpCoordDisplay" readonly>
-                    <input type="hidden" id="latVal">
-                    <input type="hidden" id="lngVal">
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-danger btn-lg" id="btnSubmit">Kirim Laporan</button>
-                    <a href="index.html" class="btn btn-outline-secondary">Batal</a>
-                </div>
-            </form>
         </div>
+        <a href="kurator-jalur.html" class="btn btn-sm btn-warning fw-bold" style="font-size:0.75rem;">
+            <i class="fa fa-route"></i> Gambar Jalur
+        </a>
     </div>
 
+    <div class="form-container">
+
+        <!-- 1. PILIH JENIS DATA -->
+        <div class="card-clean">
+            <label class="small fw-bold text-muted text-uppercase mb-2 d-block">1. Pilih Kategori Input</label>
+            <div class="mode-grid">
+                <div class="mode-btn active-report" id="btnModeReport" onclick="switchMode('report')">
+                    <i class="fa fa-exclamation-triangle text-danger"></i>
+                    <span>Kendala / Rusak</span>
+                </div>
+                <div class="mode-btn" id="btnModeTree" onclick="switchMode('tree')">
+                    <i class="fa fa-tree text-success"></i>
+                    <span>Pohon Peneduh</span>
+                </div>
+                <div class="mode-btn" id="btnModeAmenity" onclick="switchMode('amenity')">
+                    <i class="fa fa-check-circle text-primary"></i>
+                    <span>Fasilitas / POI</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. LOKASI PRESISI -->
+        <div class="card-clean">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="small fw-bold text-muted text-uppercase m-0">2. Titik Koordinat</label>
+                <button type="button" class="btn btn-sm btn-outline-dark py-0 px-2" style="font-size:0.75rem;" onclick="locateUser()">
+                    <i class="fa fa-crosshairs"></i> GPS Saat Ini
+                </button>
+            </div>
+            <div id="miniMap"></div>
+            <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
+                <span>Geser pin atau ketuk peta untuk koreksi</span>
+                <span class="fw-bold text-dark" id="coordDisplay">-8.65000, 115.21670</span>
+            </div>
+        </div>
+
+        <!-- 3. FORM DINAMIS -->
+        <form id="fieldForm" class="card-clean" onsubmit="handleSubmit(event)">
+            <label class="small fw-bold text-muted text-uppercase mb-2 d-block">3. Detail Observasi</label>
+
+            <!-- A. FIELDS KENDALA -->
+            <div id="sectionReport">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Jenis Kendala *</label>
+                    <select id="repType" class="form-select form-select-sm">
+                        <option value="Trotoar Rusak / Berlubang">Trotoar Rusak / Berlubang</option>
+                        <option value="Parkir Liar di Trotoar">Parkir Liar di Trotoar</option>
+                        <option value="Pedagang / Barang Menghalangi Jalur">Pedagang / Barang Menghalangi Jalur</option>
+                        <option value="Tidak Ada Trotoar">Tidak Ada Trotoar</option>
+                        <option value="Tiang / Kabel Menghalangi">Tiang / Kabel Menghalangi</option>
+                        <option value="Tidak Ada Ramp Disabilitas">Tidak Ada Ramp Disabilitas</option>
+                        <option value="Zebra Cross Pudar / Tidak Aman">Zebra Cross Pudar / Tidak Aman</option>
+                        <option value="Lampu Penerangan Mati">Lampu Penerangan Mati</option>
+                        <option value="Lainnya">Kendala Lainnya</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Nama Ruas Jalan Terdekat</label>
+                    <input type="text" id="repStreet" class="form-control form-control-sm" placeholder="Contoh: Jl. Gajah Mada">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Keterangan Kondisi *</label>
+                    <textarea id="repDesc" class="form-control form-control-sm" rows="3" placeholder="Jelaskan kondisi lapangan secara singkat..."></textarea>
+                </div>
+            </div>
+
+            <!-- B. FIELDS POHON PENEDUH -->
+            <div id="sectionTree" style="display:none;">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Jenis / Spesies Pohon *</label>
+                    <input type="text" id="treeSpecies" class="form-control form-control-sm" placeholder="Ketik atau pilih di bawah...">
+                    <div class="chip-container">
+                        <span class="species-chip" onclick="setSpecies('Tabebuya')">Tabebuya</span>
+                        <span class="species-chip" onclick="setSpecies('Ketapang Kencana')">Ketapang Kencana</span>
+                        <span class="species-chip" onclick="setSpecies('Angsana')">Angsana</span>
+                        <span class="species-chip" onclick="setSpecies('Mahoni')">Mahoni</span>
+                        <span class="species-chip" onclick="setSpecies('Tanjung')">Tanjung</span>
+                        <span class="species-chip" onclick="setSpecies('Pule')">Pule</span>
+                        <span class="species-chip" onclick="setSpecies('Palem')">Palem</span>
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Lebar Tajuk (meter)</label>
+                        <input type="number" step="0.5" min="0.5" max="30" id="treeCanopy" class="form-control form-control-sm" value="4.0">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Diameter Batang (cm)</label>
+                        <input type="number" step="1" min="1" max="500" id="treeTrunk" class="form-control form-control-sm" placeholder="Opsional">
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Kualitas Keteduhan</label>
+                        <select id="treeShade" class="form-select form-select-sm">
+                            <option value="Rindang">Rindang (Teduh Luas)</option>
+                            <option value="Sedang" selected>Sedang</option>
+                            <option value="Minim / Baru Tanam">Minim / Baru Tanam</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Kondisi Kesehatan</label>
+                        <select id="treeHealth" class="form-select form-select-sm">
+                            <option value="Sehat" selected>Sehat</option>
+                            <option value="Perlu Pemangkasan">Perlu Pemangkasan</option>
+                            <option value="Akar Merusak Trotoar">Akar Merusak Trotoar</option>
+                            <option value="Berisiko Tumbang">Berisiko Tumbang</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Nama Pencatat / Komunitas</label>
+                    <input type="text" id="treeRecorder" class="form-control form-control-sm" value="Komunitas Kopeka Bali">
+                </div>
+            </div>
+
+            <!-- C. FIELDS FASILITAS / POI -->
+            <div id="sectionAmenity" style="display:none;">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Jenis Fasilitas / POI *</label>
+                    <select id="amenType" class="form-select form-select-sm">
+                        <option value="Halte Bus / Trans Metro">Halte Bus / Trans Metro</option>
+                        <option value="Pelican / Zebra Cross">Pelican / Zebra Cross</option>
+                        <option value="Ramp Kursi Roda">Ramp Kursi Roda</option>
+                        <option value="Guiding Block (Ubin Pemandu)">Guiding Block (Ubin Pemandu)</option>
+                        <option value="Rak Parkir Sepeda">Rak Parkir Sepeda</option>
+                        <option value="Bangku Taman / Istirahat">Bangku Taman / Istirahat</option>
+                        <option value="Lampu Penerangan Jalan">Lampu Penerangan Jalan</option>
+                        <option value="Titik Air Minum / Toilet Umum">Titik Air Minum / Toilet Umum</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Nama Lokasi / Titik *</label>
+                    <input type="text" id="amenName" class="form-control form-control-sm" placeholder="Contoh: Halte Udayana Sudirman">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Catatan Kondisi Fasilitas</label>
+                    <textarea id="amenDesc" class="form-control form-control-sm" rows="2" placeholder="Contoh: Kondisi baik, akses landai tersedia..."></textarea>
+                </div>
+            </div>
+
+            <!-- FOTO BUKTI (BERLAKU UNTUK SEMUA MODE) -->
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Foto Dokumentasi</label>
+                <input type="file" id="photoInput" accept="image/*" capture="environment" class="form-control form-control-sm" onchange="previewPhoto(this)">
+                <img id="photoPreview" alt="Preview Foto">
+            </div>
+
+            <button type="submit" id="btnSubmit" class="btn btn-dark w-100 fw-bold py-2 rounded-pill">
+                <i class="fa fa-paper-plane me-1"></i> Simpan Data ke Peta
+            </button>
+        </form>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // --- KONFIGURASI ---
-        const SUPABASE_URL = 'https://rlsboveqzkrdcbohxnsi.supabase.co'; 
-        const SUPABASE_KEY = 'sb_publishable_OZYrnFcWViuxtMHo12cLjg_NbhUzdiF'; 
-        const BUCKET_NAME  = 'photos'; 
-
+        const SUPABASE_URL = 'https://rlsboveqzkrdcbohxnsi.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_OZYrnFcWViuxtMHo12cLjg_NbhUzdiF';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // 1. Ambil Parameter URL saat halaman dibuka
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const lat = urlParams.get('lat');
-            const lng = urlParams.get('lng');
+        let currentMode = 'report'; // 'report' | 'tree' | 'amenity'
+        let currentLat = -8.6500;
+        let currentLng = 115.2167;
 
-            if(lat && lng) {
-                document.getElementById('latVal').value = lat;
-                document.getElementById('lngVal').value = lng;
-                document.getElementById('inpCoordDisplay').value = `${lat}, ${lng}`;
-            } else {
-                document.getElementById('inpCoordDisplay').value = "Lokasi tidak terdeteksi";
-                Swal.fire('Ups', 'Lokasi GPS tidak ditemukan. Mohon kembali ke peta.', 'warning');
+        // Ambil koordinat dari parameter URL jika dikirim dari index.html
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('lat') && urlParams.get('lng')) {
+            currentLat = parseFloat(urlParams.get('lat'));
+            currentLng = parseFloat(urlParams.get('lng'));
+        }
+
+        // Inisialisasi Mini Map
+        const miniMap = L.map('miniMap').setView([currentLat, currentLng], 17);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(miniMap);
+
+        const marker = L.marker([currentLat, currentLng], { draggable: true }).addTo(miniMap);
+        updateCoordLabel(currentLat, currentLng);
+
+        marker.on('dragend', () => {
+            const pos = marker.getLatLng();
+            updateCoordLabel(pos.lat, pos.lng);
+        });
+
+        miniMap.on('click', (e) => {
+            marker.setLatLng(e.latlng);
+            updateCoordLabel(e.latlng.lat, e.latlng.lng);
+        });
+
+        if (!urlParams.get('lat')) {
+            locateUser();
+        }
+
+        function locateUser() {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition((pos) => {
+                const { latitude, longitude } = pos.coords;
+                miniMap.setView([latitude, longitude], 18);
+                marker.setLatLng([latitude, longitude]);
+                updateCoordLabel(latitude, longitude);
+            });
+        }
+
+        function updateCoordLabel(lat, lng) {
+            currentLat = lat;
+            currentLng = lng;
+            document.getElementById('coordDisplay').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('btnModeReport').className  = 'mode-btn' + (mode === 'report' ? ' active-report' : '');
+            document.getElementById('btnModeTree').className    = 'mode-btn' + (mode === 'tree' ? ' active-tree' : '');
+            document.getElementById('btnModeAmenity').className = 'mode-btn' + (mode === 'amenity' ? ' active-amenity' : '');
+
+            document.getElementById('sectionReport').style.display  = mode === 'report' ? 'block' : 'none';
+            document.getElementById('sectionTree').style.display    = mode === 'tree' ? 'block' : 'none';
+            document.getElementById('sectionAmenity').style.display = mode === 'amenity' ? 'block' : 'none';
+        }
+
+        function setSpecies(name) {
+            document.getElementById('treeSpecies').value = name;
+        }
+
+        function previewPhoto(input) {
+            const preview = document.getElementById('photoPreview');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
             }
         }
 
-        // 2. Handle Submit
-        document.getElementById('formLapor').addEventListener('submit', async (e) => {
+        // Kompres gambar di sisi klien agar hemat kuota & cepat saat audit lapangan
+        async function compressAndUploadPhoto(file, folder) {
+            if (!file) return null;
+            try {
+                const compressedBlob = await new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const maxW = 1024;
+                        const scale = img.width > maxW ? maxW / img.width : 1;
+                        canvas.width = img.width * scale;
+                        canvas.height = img.height * scale;
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.75);
+                    };
+                    img.src = URL.createObjectURL(file);
+                });
+
+                const fileName = `${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.jpg`;
+                const { error } = await supabaseClient.storage
+                    .from('kopeka-uploads')
+                    .upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+
+                if (error) {
+                    console.warn('Upload foto dilewati:', error.message);
+                    return null;
+                }
+
+                const { data: pubUrl } = supabaseClient.storage.from('kopeka-uploads').getPublicUrl(fileName);
+                return pubUrl.publicUrl;
+            } catch (err) {
+                console.warn('Gagal memproses foto:', err);
+                return null;
+            }
+        }
+
+        async function handleSubmit(e) {
             e.preventDefault();
             const btn = document.getElementById('btnSubmit');
-            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Mengirim...';
             btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Menyimpan...';
+
+            const geomWKT = `SRID=4326;POINT(${currentLng} ${currentLat})`;
+            const photoFile = document.getElementById('photoInput').files[0];
 
             try {
-                // Upload Foto
-                const file = document.getElementById('inpPhoto').files[0];
-                const fileName = `${Date.now()}.${file.name.split('.').pop()}`;
-                const { error: uploadError } = await supabaseClient.storage.from(BUCKET_NAME).upload(fileName, file);
-                if (uploadError) throw uploadError;
+                if (currentMode === 'report') {
+                    const desc = document.getElementById('repDesc').value.trim();
+                    if (!desc) throw new Error('Mohon isi keterangan kondisi kendala.');
 
-                const { data: { publicUrl } } = supabaseClient.storage.from(BUCKET_NAME).getPublicUrl(fileName);
+                    const photoUrl = await compressAndUploadPhoto(photoFile, 'reports');
+                    const { error } = await supabaseClient.from('reports').insert([{
+                        report_type: document.getElementById('repType').value,
+                        nearest_street: document.getElementById('repStreet').value.trim() || null,
+                        description: desc,
+                        photo_url: photoUrl,
+                        geom: geomWKT
+                    }]);
+                    if (error) throw error;
 
-                // Insert Data
-                const { error: insertError } = await supabaseClient.from('reports').insert({
-                    report_type: document.getElementById('inpType').value,
-                    description: document.getElementById('inpDesc').value,
-                    photo_url: publicUrl,
-                    latitude: document.getElementById('latVal').value,
-                    longitude: document.getElementById('lngVal').value,
-                    reporter_name: document.getElementById('inpName').value,
-                    reporter_contact: document.getElementById('inpContact').value,
-                    status: 'Pending'
-                });
+                } else if (currentMode === 'tree') {
+                    const species = document.getElementById('treeSpecies').value.trim();
+                    if (!species) throw new Error('Mohon isi jenis/spesies pohon.');
 
-                if (insertError) throw insertError;
+                    const photoUrl = await compressAndUploadPhoto(photoFile, 'trees');
+                    const { error } = await supabaseClient.from('trees').insert([{
+                        species_name: species,
+                        canopy_diameter_m: parseFloat(document.getElementById('treeCanopy').value) || 3.0,
+                        trunk_diameter_cm: parseFloat(document.getElementById('treeTrunk').value) || null,
+                        shade_quality: document.getElementById('treeShade').value,
+                        health_status: document.getElementById('treeHealth').value,
+                        recorded_by: document.getElementById('treeRecorder').value.trim() || 'Komunitas',
+                        photo_url: photoUrl,
+                        geom: geomWKT
+                    }]);
+                    if (error) throw error;
 
-                // Sukses
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'Laporan Diterima!',
-                    text: 'Terima kasih. Laporan Anda akan diverifikasi admin sebelum tampil di peta.',
-                    confirmButtonText: 'Siap'
-                });
-                window.location.href = 'index.html'; // Balik ke peta
+                } else if (currentMode === 'amenity') {
+                    const name = document.getElementById('amenName').value.trim();
+                    if (!name) throw new Error('Mohon isi nama fasilitas/POI.');
+
+                    const photoUrl = await compressAndUploadPhoto(photoFile, 'amenities');
+                    const { error } = await supabaseClient.from('amenities').insert([{
+                        amenity_type: document.getElementById('amenType').value,
+                        name: name,
+                        description: document.getElementById('amenDesc').value.trim() || null,
+                        photo_url: photoUrl,
+                        geom: geomWKT
+                    }]);
+                    if (error) throw error;
+                }
+
+                alert('Data berhasil disimpan ke peta!');
+                window.location.href = 'index.html';
 
             } catch (err) {
-                console.error(err);
-                Swal.fire('Gagal', err.message, 'error');
-                btn.innerHTML = 'Kirim Laporan';
+                alert('Gagal menyimpan: ' + err.message);
                 btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-paper-plane me-1"></i> Simpan Data ke Peta';
             }
-        });
+        }
     </script>
 </body>
 </html>
