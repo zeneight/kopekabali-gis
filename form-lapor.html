@@ -237,7 +237,7 @@
 
         // Inisialisasi Mini Map
         const miniMap = L.map('miniMap').setView([currentLat, currentLng], 17);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(miniMap);
+        L.tileLayer('L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_30fe_1_143028887eece1f45792790a').addTo(miniMap);
 
         const marker = L.marker([currentLat, currentLng], { draggable: true }).addTo(miniMap);
         updateCoordLabel(currentLat, currentLng);
