@@ -393,7 +393,7 @@
         // --- 2. INISIALISASI PETA ---
         const map = L.map('map', { zoomControl: false }).setView([-8.6500, 115.2167], 13);
         L.control.zoom({ position: 'bottomleft' }).addTo(map);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_30fe_1_143028887eece1f45792790a', {
             attribution: '&copy; OpenStreetMap &copy; CARTO | Kopeka Bali'
         }).addTo(map);
 
