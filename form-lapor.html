@@ -22,7 +22,6 @@
         }
         #miniMap { height: 220px; width: 100%; border-radius: 10px; border: 1px solid #cbd5e1; z-index: 1; }
         
-        /* Mode Selector Tabs */
         .mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         .mode-btn {
             border: 1.5px solid #e2e8f0; background: #fff; border-radius: 10px;
@@ -34,7 +33,6 @@
         .mode-btn.active-tree   { border-color: #16a34a; background: #f0fdf4; color: #166534; }
         .mode-btn.active-amenity{ border-color: #2563eb; background: #eff6ff; color: #1e40af; }
 
-        /* Quick Species Chips */
         .chip-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
         .species-chip {
             font-size: 0.74rem; padding: 3px 10px; border-radius: 20px;
@@ -65,7 +63,6 @@
 
     <div class="form-container">
 
-        <!-- 1. PILIH JENIS DATA -->
         <div class="card-clean">
             <label class="small fw-bold text-muted text-uppercase mb-2 d-block">1. Pilih Kategori Input</label>
             <div class="mode-grid">
@@ -84,7 +81,6 @@
             </div>
         </div>
 
-        <!-- 2. LOKASI PRESISI -->
         <div class="card-clean">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <label class="small fw-bold text-muted text-uppercase m-0">2. Titik Koordinat</label>
@@ -99,7 +95,6 @@
             </div>
         </div>
 
-        <!-- 3. FORM DINAMIS -->
         <form id="fieldForm" class="card-clean" onsubmit="handleSubmit(event)">
             <label class="small fw-bold text-muted text-uppercase mb-2 d-block">3. Detail Observasi</label>
 
@@ -109,6 +104,8 @@
                     <label class="form-label small fw-bold">Jenis Kendala *</label>
                     <select id="repType" class="form-select form-select-sm">
                         <option value="Trotoar Rusak / Berlubang">Trotoar Rusak / Berlubang</option>
+                        <option value="Trotoar Terputus / Buntu">Trotoar Terputus / Buntu</option>
+                        <option value="Tidak Ada Zebra Cross">Tidak Ada Zebra Cross</option>
                         <option value="Parkir Liar di Trotoar">Parkir Liar di Trotoar</option>
                         <option value="Pedagang / Barang Menghalangi Jalur">Pedagang / Barang Menghalangi Jalur</option>
                         <option value="Tidak Ada Trotoar">Tidak Ada Trotoar</option>
@@ -204,7 +201,6 @@
                 </div>
             </div>
 
-            <!-- FOTO BUKTI (BERLAKU UNTUK SEMUA MODE) -->
             <div class="mb-3">
                 <label class="form-label small fw-bold">Foto Dokumentasi</label>
                 <input type="file" id="photoInput" accept="image/*" capture="environment" class="form-control form-control-sm" onchange="previewPhoto(this)">
@@ -217,27 +213,31 @@
         </form>
     </div>
 
+    <script src="config.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        const SUPABASE_URL = 'https://rlsboveqzkrdcbohxnsi.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_OZYrnFcWViuxtMHo12cLjg_NbhUzdiF';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const APP_CFG = window.APP_CONFIG || {};
+        const supabaseClient = supabase.createClient(APP_CFG.SUPABASE_URL, APP_CFG.SUPABASE_KEY);
 
-        let currentMode = 'report'; // 'report' | 'tree' | 'amenity'
+        const rawBaseUrl = APP_CFG.BASEMAP_URL || 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        const baseKey = APP_CFG.BASEMAP_API_KEY || '';
+        const finalTileUrl = baseKey
+            ? `${rawBaseUrl}${rawBaseUrl.includes('?') ? '&' : '?'}key=${encodeURIComponent(baseKey)}`
+            : rawBaseUrl;
+
+        let currentMode = 'report';
         let currentLat = -8.6500;
         let currentLng = 115.2167;
 
-        // Ambil koordinat dari parameter URL jika dikirim dari index.html
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('lat') && urlParams.get('lng')) {
             currentLat = parseFloat(urlParams.get('lat'));
             currentLng = parseFloat(urlParams.get('lng'));
         }
 
-        // Inisialisasi Mini Map
         const miniMap = L.map('miniMap').setView([currentLat, currentLng], 17);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_30fe_1_143028887eece1f45792790a').addTo(miniMap);
+        L.tileLayer(finalTileUrl).addTo(miniMap);
 
         const marker = L.marker([currentLat, currentLng], { draggable: true }).addTo(miniMap);
         updateCoordLabel(currentLat, currentLng);
@@ -252,9 +252,7 @@
             updateCoordLabel(e.latlng.lat, e.latlng.lng);
         });
 
-        if (!urlParams.get('lat')) {
-            locateUser();
-        }
+        if (!urlParams.get('lat')) locateUser();
 
         function locateUser() {
             if (!navigator.geolocation) return;
@@ -299,7 +297,6 @@
             }
         }
 
-        // Kompres gambar di sisi klien agar hemat kuota & cepat saat audit lapangan
         async function compressAndUploadPhoto(file, folder) {
             if (!file) return null;
             try {
@@ -322,15 +319,11 @@
                     .from('kopeka-uploads')
                     .upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
 
-                if (error) {
-                    console.warn('Upload foto dilewati:', error.message);
-                    return null;
-                }
+                if (error) return null;
 
                 const { data: pubUrl } = supabaseClient.storage.from('kopeka-uploads').getPublicUrl(fileName);
                 return pubUrl.publicUrl;
-            } catch (err) {
-                console.warn('Gagal memproses foto:', err);
+            } catch {
                 return null;
             }
         }

@@ -16,7 +16,7 @@
 
         .sidebar-card {
             position: absolute; top: 16px; right: 16px; z-index: 1000;
-            width: 350px; max-height: calc(100vh - 32px); overflow-y: auto;
+            width: 360px; max-height: calc(100vh - 32px); overflow-y: auto;
             background: rgba(255,255,255,0.97); backdrop-filter: blur(6px);
             border-radius: 12px; padding: 16px;
             box-shadow: 0 8px 30px rgba(0,0,0,0.15); border: 1px solid #e2e8f0;
@@ -33,7 +33,7 @@
         @media (max-width: 768px) {
             .sidebar-card {
                 top: auto; bottom: 0; left: 0; right: 0; width: 100%;
-                max-height: 52vh; border-radius: 16px 16px 0 0;
+                max-height: 55vh; border-radius: 16px 16px 0 0;
             }
             .top-nav-pill { left: 54px; right: 12px; font-size: 0.8rem; }
         }
@@ -44,14 +44,13 @@
     <div class="top-nav-pill">
         <a href="index.html" class="text-warning text-decoration-none fw-bold"><i class="fa fa-arrow-left"></i> Peta Utama</a>
         <span class="text-white-50">|</span>
-        <span class="fw-bold small">Kurator Jalur Pejalan Kaki & Sepeda</span>
+        <span class="fw-bold small">Kurator Trotoar & Jalur Aktif</span>
     </div>
 
     <div class="sidebar-card">
-        <h6 class="fw-bold mb-1 text-dark"><i class="fa fa-route text-success me-1"></i> Tambah Jalur Mobilitas Aktif</h6>
-        <p class="small text-muted mb-2">Gunakan ikon garis (<i class="fa fa-minus"></i>) di kiri peta untuk menggambar, atau unggah GPX/GeoJSON.</p>
+        <h6 class="fw-bold mb-1 text-dark"><i class="fa fa-route text-success me-1"></i> Tambah Segmen Trotoar / Jalur</h6>
+        <p class="small text-muted mb-2">Gambar trotoar di masing-masing sisi jalan secara terpisah, lalu hubungkan dengan segmen <strong>Penyeberangan</strong> jika tersedia zebra cross.</p>
 
-        <!-- Impor File GPX / GeoJSON -->
         <div class="mb-3">
             <label class="btn btn-outline-secondary btn-sm w-100 fw-semibold">
                 <i class="fa fa-file-upload me-1"></i> Impor Rekaman GPX / GeoJSON
@@ -66,44 +65,57 @@
 
         <form id="pathForm" onsubmit="saveActivePath(event)">
             <div class="mb-2">
-                <label class="small fw-bold text-muted">Nama Jalur / Koridor *</label>
-                <input type="text" id="pathName" class="form-control form-control-sm" required placeholder="Contoh: Jalur Pesisir Pantai Karang - Mertasari">
+                <label class="small fw-bold text-muted">Nama Jalur / Ruas Trotoar *</label>
+                <input type="text" id="pathName" class="form-control form-control-sm" required placeholder="Contoh: Trotoar Jl. Gajah Mada (Sisi Utara)">
             </div>
 
             <div class="row g-2 mb-2">
-                <div class="col-7">
-                    <label class="small fw-bold text-muted">Tipe Jalur *</label>
-                    <select id="pathType" class="form-select form-select-sm">
-                        <option value="Shared Path (Jalan Kaki & Sepeda)">Shared Path (Jalan Kaki & Sepeda)</option>
-                        <option value="Jalur Pejalan Kaki">Khusus Pejalan Kaki</option>
+                <div class="col-6">
+                    <label class="small fw-bold text-muted">Tipe Segmen *</label>
+                    <select id="pathType" class="form-select form-select-sm" onchange="handleTypeChange()">
+                        <option value="Trotoar Jalan">Trotoar Jalan</option>
+                        <option value="Penyeberangan (Zebra Cross / Pelican)">Penyeberangan (Zebra Cross)</option>
+                        <option value="Shared Path (Jalan Kaki & Sepeda)">Shared Path (Kaki & Sepeda)</option>
+                        <option value="Jalur Pejalan Kaki">Jalur Khusus Pejalan Kaki</option>
                         <option value="Jalur Sepeda Terproteksi">Jalur Sepeda Terproteksi</option>
                         <option value="Jogging Track / Taman">Jogging Track / Taman</option>
                     </select>
                 </div>
-                <div class="col-5">
+                <div class="col-6">
+                    <label class="small fw-bold text-muted">Posisi / Sisi *</label>
+                    <select id="pathSide" class="form-select form-select-sm">
+                        <option value="Sisi Kiri">Sisi Kiri Jalan</option>
+                        <option value="Sisi Kanan">Sisi Kanan Jalan</option>
+                        <option value="Penyeberangan">Penyeberangan Antar-Sisi</option>
+                        <option value="Tengah / Bebas Kendaraan">Tengah / Bebas Kendaraan</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-2 mb-2">
+                <div class="col-4">
                     <label class="small fw-bold text-muted">Permukaan</label>
                     <select id="pathSurface" class="form-select form-select-sm">
                         <option value="Paving">Paving</option>
                         <option value="Aspal">Aspal</option>
                         <option value="Beton">Beton</option>
+                        <option value="Keramik / Batu">Keramik / Batu</option>
                         <option value="Gravel / Tanah">Gravel / Tanah</option>
                     </select>
                 </div>
+                <div class="col-3">
+                    <label class="small fw-bold text-muted">Lebar (m)</label>
+                    <input type="number" step="0.5" min="0.5" max="20" id="pathWidth" class="form-control form-control-sm" value="2.0">
+                </div>
+                <div class="col-5">
+                    <label class="small fw-bold text-muted">Kecamatan</label>
+                    <input type="text" id="pathDistrict" class="form-control form-control-sm" placeholder="Denpasar Barat">
+                </div>
             </div>
 
-            <div class="row g-2 mb-2">
-                <div class="col-4">
-                    <label class="small fw-bold text-muted">Lebar (m)</label>
-                    <input type="number" step="0.5" min="0.5" max="20" id="pathWidth" class="form-control form-control-sm" value="2.5">
-                </div>
-                <div class="col-4">
-                    <label class="small fw-bold text-muted">Kecamatan</label>
-                    <input type="text" id="pathDistrict" class="form-control form-control-sm" placeholder="Denpasar Selatan">
-                </div>
-                <div class="col-4">
-                    <label class="small fw-bold text-muted">Desa/Kel.</label>
-                    <input type="text" id="pathRegion" class="form-control form-control-sm" placeholder="Sanur">
-                </div>
+            <div class="mb-2">
+                <label class="small fw-bold text-muted">Desa / Kelurahan</label>
+                <input type="text" id="pathRegion" class="form-control form-control-sm" placeholder="Contoh: Pemecutan">
             </div>
 
             <div class="d-flex gap-3 my-2">
@@ -118,14 +130,14 @@
             </div>
 
             <div class="mb-3">
-                <label class="small fw-bold text-muted">Catatan Jalur</label>
-                <textarea id="pathNotes" class="form-control form-control-sm" rows="2" placeholder="Keterangan akses masuk, portal motor, keteduhan, dll..."></textarea>
+                <label class="small fw-bold text-muted">Catatan Aksesibilitas</label>
+                <textarea id="pathNotes" class="form-control form-control-sm" rows="2" placeholder="Contoh: Ramp tersedia di ujung barat, ujung timur terputus oleh saluran air..."></textarea>
             </div>
 
             <div class="d-flex gap-2">
                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearDrawnPath()">Reset Garis</button>
                 <button type="submit" id="btnSavePath" class="btn btn-success btn-sm flex-grow-1 fw-bold">
-                    <i class="fa fa-save me-1"></i> Simpan Jalur ke Database
+                    <i class="fa fa-save me-1"></i> Simpan Segmen
                 </button>
             </div>
         </form>
@@ -133,24 +145,29 @@
 
     <div id="map"></div>
 
+    <script src="config.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        const SUPABASE_URL = 'https://rlsboveqzkrdcbohxnsi.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_OZYrnFcWViuxtMHo12cLjg_NbhUzdiF';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const APP_CFG = window.APP_CONFIG || {};
+        const supabaseClient = supabase.createClient(APP_CFG.SUPABASE_URL, APP_CFG.SUPABASE_KEY);
 
-        const map = L.map('map').setView([-8.6500, 115.2167], 14);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_30fe_1_143028887eece1f45792790a', {
-            attribution: '&copy; OpenStreetMap &copy; CARTO'
+        const rawBaseUrl = APP_CFG.BASEMAP_URL || 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        const baseKey = APP_CFG.BASEMAP_API_KEY || '';
+        const finalTileUrl = baseKey
+            ? `${rawBaseUrl}${rawBaseUrl.includes('?') ? '&' : '?'}key=${encodeURIComponent(baseKey)}`
+            : rawBaseUrl;
+
+        const map = L.map('map').setView([-8.6500, 115.2167], 16);
+        L.tileLayer(finalTileUrl, {
+            maxZoom: 20,
+            attribution: '&copy; OpenStreetMap | Kopeka Bali'
         }).addTo(map);
 
-        // Layer penampung garis yang sedang digambar/diedit
         const drawnItems = new L.FeatureGroup().addTo(map);
-        let activeCoords = []; // Format [lng, lat]
+        let activeCoords = [];
 
-        // Toolbar Leaflet.draw (hanya aktifkan Polyline)
         const drawControl = new L.Control.Draw({
             position: 'topleft',
             draw: {
@@ -170,27 +187,47 @@
         });
         map.addControl(drawControl);
 
-        // Muat jalur yang sudah ada agar kurator tidak menggambar ulang segmen yang sama
+        // Sinkronisasi otomatis dropdown sisi jika memilih tipe Penyeberangan
+        function handleTypeChange() {
+            const typeVal = document.getElementById('pathType').value;
+            const sideSelect = document.getElementById('pathSide');
+            if (typeVal.includes('Penyeberangan')) {
+                sideSelect.value = 'Penyeberangan';
+                drawnItems.setStyle({ color: '#f59e0b', weight: 6 });
+            } else {
+                if (sideSelect.value === 'Penyeberangan') sideSelect.value = 'Sisi Kiri';
+                drawnItems.setStyle({ color: '#0d9488', weight: 6 });
+            }
+        }
+
+        // Muat segmen yang sudah ada agar kurator bisa menghubungkan ujung trotoar & zebra cross secara presisi
         async function loadExistingPaths() {
             const { data } = await supabaseClient.from('api_active_paths_geojson').select('*').single();
             if (data?.row_to_json?.features) {
                 L.geoJSON(data.row_to_json, {
-                    style: { color: '#94a3b8', weight: 4, dashArray: '6,6', opacity: 0.7 },
-                    onEachFeature: (f, layer) => layer.bindTooltip(`Sudah ada: ${f.properties.name}`)
+                    style: (f) => {
+                        const isCrossing = f.properties.side === 'Penyeberangan' || (f.properties.path_type || '').includes('Penyeberangan');
+                        return {
+                            color: isCrossing ? '#f59e0b' : '#64748b',
+                            weight: 4,
+                            dashArray: isCrossing ? '3,6' : '6,6',
+                            opacity: 0.75
+                        };
+                    },
+                    onEachFeature: (f, layer) => layer.bindTooltip(`${f.properties.name} (${f.properties.side || '-'})`)
                 }).addTo(map);
             }
         }
         loadExistingPaths();
 
-        // Event saat selesai menggambar polyline
         map.on(L.Draw.Event.CREATED, (e) => {
             drawnItems.clearLayers();
             const layer = e.layer;
             drawnItems.addLayer(layer);
+            handleTypeChange();
             syncCoordsFromLayer(layer);
         });
 
-        // Event saat titik garis diedit
         map.on(L.Draw.Event.EDITED, (e) => {
             e.layers.eachLayer((layer) => syncCoordsFromLayer(layer));
         });
@@ -204,7 +241,6 @@
             const latlngs = layer.getLatLngs();
             activeCoords = latlngs.map(ll => [ll.lng, ll.lat]);
 
-            // Hitung total panjang garis dalam meter
             let totalMeters = 0;
             for (let i = 1; i < latlngs.length; i++) {
                 totalMeters += latlngs[i - 1].distanceTo(latlngs[i]);
@@ -218,7 +254,6 @@
             document.getElementById('lengthBadge').innerText = '0 meter (Belum digambar)';
         }
 
-        // Impor file GPX atau GeoJSON hasil rekaman GPS
         function handleFileImport(input) {
             const file = input.files[0];
             if (!file) return;
@@ -231,8 +266,7 @@
                 if (file.name.toLowerCase().endsWith('.gpx')) {
                     const parser = new DOMParser();
                     const xml = parser.parseFromString(text, 'text/xml');
-                    const pts = xml.querySelectorAll('trkpt, rtept');
-                    pts.forEach(pt => {
+                    xml.querySelectorAll('trkpt, rtept').forEach(pt => {
                         const lat = parseFloat(pt.getAttribute('lat'));
                         const lon = parseFloat(pt.getAttribute('lon'));
                         if (!isNaN(lat) && !isNaN(lon)) latlngs.push([lat, lon]);
@@ -277,6 +311,7 @@
                 const { error } = await supabaseClient.from('active_mobility_paths').insert([{
                     name: document.getElementById('pathName').value.trim(),
                     path_type: document.getElementById('pathType').value,
+                    side: document.getElementById('pathSide').value,
                     surface: document.getElementById('pathSurface').value,
                     width_m: parseFloat(document.getElementById('pathWidth').value) || null,
                     district_name: document.getElementById('pathDistrict').value.trim() || null,
@@ -289,12 +324,12 @@
 
                 if (error) throw error;
 
-                alert('Jalur mobilitas aktif berhasil disimpan!');
+                alert('Segmen jalur berhasil disimpan!');
                 window.location.href = 'index.html';
             } catch (err) {
                 alert('Gagal menyimpan jalur: ' + err.message);
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa fa-save me-1"></i> Simpan Jalur ke Database';
+                btn.innerHTML = '<i class="fa fa-save me-1"></i> Simpan Segmen';
             }
         }
     </script>
