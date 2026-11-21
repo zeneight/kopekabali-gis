@@ -3,292 +3,379 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Peta Denpasar Walkability</title>
+    <title>Peta Mobilitas Aktif & Walkability — Kopeka Bali</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
     <style>
-        body, html { margin: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #f8f9fa; }
+        body, html { margin: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f8f9fa; }
         #map { height: 100vh; width: 100%; z-index: 1; }
 
-        .popup-card-body {
-            padding: 12px;
-        }
-
-        .popup-hero-img {
-            width: 100%; height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; border:1px solid #e0e0e0;
-        }
-        
-        /* --- 1. BASE FLOATING CARD (Gaya Visual Saja) --- */
-        /* Kita hapus 'right' dan 'width' dari sini agar fleksibel */
+        /* --- FLOATING CARDS --- */
         .floating-card {
             position: absolute; 
             z-index: 1000;
-            background: rgba(255,255,255,0.98); 
-            padding: 20px; 
+            background: rgba(255, 255, 255, 0.97); 
+            backdrop-filter: blur(6px);
+            padding: 16px; 
             border-radius: 12px;
             box-shadow: 0 8px 30px rgba(0,0,0,0.12); 
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-
-        /* --- 2. VARIAN KARTU (Posisi & Ukuran) --- */
-        
-        /* Kartu Filter (Kanan Atas) */
-        .filter-card { 
-            top: 20px; 
-            right: 20px;        /* Tetapkan Kanan di sini */
-            width: 300px;       /* Lebar tetap untuk filter */
+            border: 1px solid rgba(0,0,0,0.06);
         }
 
         /* Kartu Branding (Kiri Atas) */
         .branding-card {
-            top: 20px;
-            left: 20px;         /* Tetapkan Kiri di sini */
-            width: auto;        /* Lebar mengikuti konten */
-            min-width: 260px;
-            border-left: 5px solid #fbf316; /* Aksen Merah */
+            top: 16px;
+            left: 16px;
+            min-width: 250px;
+            border-left: 5px solid #fbf316;
         }
 
-        /* Kartu Legenda (Jika nanti dipakai) */
-        .legend-card { 
-            bottom: 100px; 
-            right: 20px;        /* Legenda biasanya di kanan bawah */
-            padding: 15px; 
-            width: auto; 
-            min-width: 150px; 
+        /* Kartu Kontrol Layer & Filter (Kanan Atas) */
+        .control-panel-card { 
+            top: 16px; 
+            right: 16px;
+            width: 330px;
+            max-height: calc(100vh - 110px);
+            overflow-y: auto;
         }
 
-        /* --- 3. CUSTOM POPUP LEAFLET --- */
-        .leaflet-popup-content-wrapper { border-radius: 12px; padding: 0; overflow: hidden; }
-        .leaflet-popup-content { margin: 0; width: 300px !important; } /* Sedikit diperlebar */
-        
-        .popup-header {
-            background: #2c3e50; color: white; padding: 12px 15px;
-            border-bottom: 3px solid #34495e;
-        }
-        .popup-body { padding: 15px; }
-        
-        /* Grid Statistik dalam Popup */
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .stat-item { 
-            background: #f8f9fa; border-radius: 8px; padding: 8px; text-align: center; 
-            border: 1px solid #e9ecef;
-        }
-        .stat-val { font-weight: bold; font-size: 1.1rem; display: block; color: #2c3e50; }
-        .stat-label { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* Custom Scrollbar untuk Panel Kanan */
+        .control-panel-card::-webkit-scrollbar { width: 5px; }
+        .control-panel-card::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-        /* --- 4. TOMBOL LINK BRANDING --- */
-        .brand-link {
-            font-size: 0.85rem;
-            color: #2c3e50;
-            text-decoration: none;
+        /* Layer Toggle Item */
+        .layer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 10px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 6px;
+            transition: background 0.15s;
+        }
+        .layer-item:hover { background: #f1f5f9; }
+        .layer-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
             font-weight: 600;
-            transition: color 0.2s;
+            color: #1e293b;
+            cursor: pointer;
+            margin: 0;
         }
+        .layer-swatch-line {
+            width: 18px;
+            height: 4px;
+            border-radius: 2px;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .layer-swatch-dashed {
+            width: 18px;
+            height: 0;
+            border-top: 3px dashed #0d9488;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .layer-swatch-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+            border: 1.5px solid #fff;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+        }
+
+        /* Preset Pills */
+        .preset-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+        .preset-btn {
+            font-size: 0.72rem;
+            padding: 3px 8px;
+            border-radius: 20px;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #475569;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .preset-btn.active, .preset-btn:hover {
+            background: #1e293b;
+            color: #fff;
+            border-color: #1e293b;
+        }
+
+        /* Popup Styling */
+        .leaflet-popup-content-wrapper { border-radius: 12px; padding: 0; overflow: hidden; }
+        .leaflet-popup-content { margin: 0; width: 300px !important; }
+        .popup-hero-img { width: 100%; height: 150px; object-fit: cover; border-bottom: 1px solid #e2e8f0; }
+
+        .brand-link { font-size: 0.82rem; color: #2c3e50; text-decoration: none; font-weight: 600; }
         .brand-link:hover { color: #e74c3c; }
 
-        /* --- 5. FAB BUTTON (Lapor) --- */
+        /* FAB Lapor */
         .fab-btn {
-            position: absolute; bottom: 30px; right: 20px; z-index: 1000;
-            border-radius: 50px; padding: 12px 25px;
-            font-weight: bold; box-shadow: 0 4px 15px rgba(231, 211, 60, 0.4);
-            transition: all 0.3s ease;
+            position: absolute; bottom: 24px; right: 16px; z-index: 1000;
+            border-radius: 50px; padding: 11px 22px;
+            font-weight: 700; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease;
         }
-        .fab-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(231, 76, 60, 0.6); }
+        .fab-btn:hover { transform: translateY(-2px); }
 
-        /* --- 6. MOBILE RESPONSIVE (Penting untuk HP) --- */
-        @media (max-width: 768px) {
-            .filter-card { display: none !important; } /* Sembunyikan filter di HP agar lega */
-            .branding-card {
-                top: 10px; left: 10px; right: 10px; /* Full width di atas */
-                width: auto !important;
-                border-left: 3px solid #fbf316;
-            }
-            .fab-btn { bottom: 20px; right: 20px; padding: 10px 20px; font-size: 0.9rem; }
-            .leaflet-control-zoom { display: none; } /* Sembunyikan tombol zoom di HP (pakai cubit) */
-        }
-
-        /* Tombol Toggle Filter (Default Sembunyi di Desktop) */
+        /* Mobile Toggle Button */
         .mobile-filter-toggle {
             display: none;
             position: absolute;
-            top: 12px;
-            right: 12px;
-            z-index: 1000;
+            top: 16px;
+            right: 16px;
+            z-index: 1001;
             border-radius: 50px;
-            padding: 8px 15px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            border: 1px solid #ddd;
+            padding: 9px 14px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
-        /* --- TAMPILAN MOBILE --- */
         @media (max-width: 768px) {
-            /* 1. Munculkan Tombol Toggle */
-            .mobile-filter-toggle { display: block; }
+            .mobile-filter-toggle { display: inline-flex; align-items: center; gap: 6px; }
+            .branding-card { top: 12px; left: 12px; padding: 10px 12px; min-width: auto; max-width: 62%; }
+            .branding-logo { width: 44px !important; height: 44px !important; }
+            .branding-logo img { width: 38px !important; height: 38px !important; }
+            .leaflet-control-zoom { display: none; }
 
-            /* 2. Atur Kartu Filter jadi Popup Tengah */
-            .filter-card {
-                display: none; /* Default sembunyi */
-                top: 50% !important; 
+            .control-panel-card {
+                display: none;
+                top: 50% !important;
                 left: 50% !important;
                 right: auto;
-                transform: translate(-50%, -50%); /* Posisi tepat di tengah */
-                width: 85% !important; /* Lebar 85% layar */
-                max-width: 350px;
-                box-shadow: 0 0 0 1000px rgba(0,0,0,0.3); /* Efek gelapkan latar belakang */
+                transform: translate(-50%, -50%);
+                width: 90% !important;
+                max-width: 360px;
+                max-height: 82vh;
+                box-shadow: 0 0 0 1000px rgba(0,0,0,0.45);
             }
-
-            /* 3. Class untuk Memunculkan Filter */
-            .filter-card.show-mobile {
+            .control-panel-card.show-mobile {
                 display: block !important;
-                animation: fadeIn 0.2s ease-out;
             }
-
-            /* Branding Card mobile */
-            .branding-card { width: auto !important; max-width: 70%; padding: 5px; }
         }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, -45%); } to { opacity: 1; transform: translate(-50%, -50%); } }
     </style>
 </head>
 <body>
 
+    <!-- Branding Card -->
     <div class="floating-card branding-card">
         <div class="d-flex align-items-center">
-            <div class="bg-light rounded-circle d-flex justify-content-center align-items-center me-3" style="width:70px; height:70px; border:1px solid #ddd;">
-                <img src="//kopekabali.vercel.app/img/logo_kopeka_bali.png" alt="Kopeka Logo" style="width:60px; height:60px;">
+            <div class="bg-light rounded-circle d-flex justify-content-center align-items-center me-2 branding-logo" style="width:60px; height:60px; border:1px solid #ddd; flex-shrink:0;">
+                <img src="https://kopekabali.vercel.app/img/logo_kopeka_bali.png" alt="Kopeka Logo" style="width:50px; height:50px;">
             </div>
             <div>
-                <h6 class="fw-bold m-0" style="color:#2c3e50;">Kopeka Bali</h6>
-                <small class="text-muted d-block" style="font-size:0.75rem; margin-bottom:4px;">Koalisi Pejalan Kaki</small>
-                
+                <h6 class="fw-bold m-0" style="color:#1e293b;">Kopeka Bali</h6>
+                <small class="text-muted d-block" style="font-size:0.72rem; line-height:1.2; margin-bottom:4px;">Langkah kita, nafas kota kita</small>
                 <div>
-                    <a href="https://kopekabali.vercel.app" target="_blank" class="brand-link">
-                        <i class="fa fa-globe"></i> Website
-                    </a>
+                    <a href="https://kopekabali.vercel.app" target="_blank" class="brand-link"><i class="fa fa-globe"></i> Web</a>
                     <span class="text-muted mx-1">|</span>
-                    <span class="brand-link" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#faqModal">
-                        <i class="fa fa-question-circle"></i> FAQ
-                    </span>
+                    <span class="brand-link" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#faqModal"><i class="fa fa-question-circle"></i> Panduan</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="floating-card filter-card">
-        <div class="d-flex align-items-center mb-3">
-            <div class="bg-warning text-white rounded p-2 me-2"><i class="fa fa-map-marked-alt"></i></div>
-            <div>
-                <h6 class="fw-bold m-0">Filter Wilayah</h6>
-                <small class="text-muted" style="font-size: 0.75rem">Data Ruas Jalan Kota Denpasar</small>
+    <!-- Mobile Toggle Button -->
+    <button class="btn btn-dark mobile-filter-toggle" onclick="toggleControlPanel()">
+        <i class="fa fa-layer-group"></i> Layer & Filter
+    </button>
+
+    <!-- Unified Control Panel: Layer Trigger + Wilayah Filter -->
+    <div id="controlPanelCard" class="floating-card control-panel-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex align-items-center">
+                <div class="bg-dark text-warning rounded p-1 px-2 me-2"><i class="fa fa-layer-group"></i></div>
+                <div>
+                    <h6 class="fw-bold m-0" style="font-size:0.92rem;">Layer & Mobilitas Aktif</h6>
+                    <small class="text-muted" style="font-size:0.72rem;">Tampilkan / sembunyikan layer peta</small>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-light d-md-none" onclick="toggleControlPanel()"><i class="fa fa-times"></i></button>
+        </div>
+
+        <!-- Preset Stakeholder -->
+        <div class="preset-pills" id="presetContainer">
+            <button class="preset-btn active" onclick="applyPreset('all', this)">Semua</button>
+            <button class="preset-btn" onclick="applyPreset('pedestrian', this)">Pejalan Kaki</button>
+            <button class="preset-btn" onclick="applyPreset('cyclist', this)">Pesepeda</button>
+            <button class="preset-btn" onclick="applyPreset('trees', this)">Audit Pohon</button>
+        </div>
+
+        <!-- Layer Switches -->
+        <div class="mb-3">
+            <div class="layer-item">
+                <label class="layer-label" for="chkWays">
+                    <span class="layer-swatch-line" style="background: linear-gradient(90deg, #2ecc71 50%, #e74c3c 50%);"></span>
+                    <span>Ruas Jalan (Walkability)</span>
+                </label>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-secondary-subtle text-dark" id="cntWays">0</span>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" id="chkWays" checked onchange="toggleLayer('ways', this.checked)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="layer-item">
+                <label class="layer-label" for="chkActivePaths">
+                    <span class="layer-swatch-dashed"></span>
+                    <span>Jalur Jalan Kaki & Sepeda</span>
+                </label>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-info-subtle text-dark" id="cntActivePaths">0</span>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" id="chkActivePaths" checked onchange="toggleLayer('activePaths', this.checked)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="layer-item">
+                <label class="layer-label" for="chkTrees">
+                    <span class="layer-swatch-dot" style="background:#16a34a;"></span>
+                    <span>Pohon Peneduh</span>
+                </label>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-success-subtle text-dark" id="cntTrees">0</span>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" id="chkTrees" checked onchange="toggleLayer('trees', this.checked)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="layer-item">
+                <label class="layer-label" for="chkAmenities">
+                    <span class="layer-swatch-dot" style="background:#2563eb;"></span>
+                    <span>Fasilitas & POI</span>
+                </label>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary-subtle text-dark" id="cntAmenities">0</span>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" id="chkAmenities" checked onchange="toggleLayer('amenities', this.checked)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="layer-item">
+                <label class="layer-label" for="chkReports">
+                    <span class="layer-swatch-dot" style="background:#dc2626;"></span>
+                    <span>Titik Kendala / Laporan</span>
+                </label>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-danger-subtle text-dark" id="cntReports">0</span>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" id="chkReports" checked onchange="toggleLayer('reports', this.checked)">
+                    </div>
+                </div>
             </div>
         </div>
-        
+
+        <hr class="my-2">
+
+        <!-- Filter Wilayah (Untuk Jaringan Jalan & Jalur Aktif) -->
         <div class="mb-2">
-            <label class="small fw-bold text-muted mb-1">Kecamatan</label>
+            <label class="small fw-bold text-muted mb-1" style="font-size:0.75rem;">Filter Kecamatan</label>
             <select id="selKecamatan" class="form-select form-select-sm shadow-none" onchange="handleDistrictChange()">
                 <option value="all">Semua Kecamatan</option>
             </select>
         </div>
         <div class="mb-2">
-            <label class="small fw-bold text-muted mb-1">Desa / Kelurahan</label>
+            <label class="small fw-bold text-muted mb-1" style="font-size:0.75rem;">Desa / Kelurahan</label>
             <select id="selDesa" class="form-select form-select-sm shadow-none" onchange="applyFilter()">
-                <option value="all">Semua Desa</option>
+                <option value="all">Semua Desa/Kelurahan</option>
             </select>
         </div>
-        <div class="mb-3">
-            <label class="small fw-bold text-muted mb-1">Kewenangan Jalan</label>
+        <div class="mb-2">
+            <label class="small fw-bold text-muted mb-1" style="font-size:0.75rem;">Kewenangan Jalan</label>
             <select id="selAuth" class="form-select form-select-sm shadow-none" onchange="applyFilter()">
                 <option value="all">Semua Kewenangan</option>
             </select>
         </div>
-        
-        <div class="alert alert-light border text-center p-1 mb-0 small text-muted">
-            <i class="fa fa-road"></i> <span id="totalCount">Memuat data...</span>
+
+        <!-- Legenda Ringkas -->
+        <div class="bg-light rounded p-2 mt-2 border" style="font-size:0.72rem;">
+            <div class="fw-bold text-muted mb-1 text-uppercase">Keterangan Garis</div>
+            <div class="d-flex flex-wrap gap-2">
+                <span><i class="fa fa-minus text-success"></i> Ramah</span>
+                <span><i class="fa fa-minus text-danger"></i> Bermasalah</span>
+                <span><i class="fa fa-minus text-secondary"></i> Netral</span>
+                <span style="color:#0d9488; font-weight:700;">--- Khusus Jalan Kaki/Sepeda</span>
+            </div>
         </div>
     </div>
 
-    <div class="floating-card legend-card d-none d-md-block">
-        <h6 class="fw-bold small mb-2 text-uppercase text-muted">Kondisi Jalan</h6>
-        <div class="d-flex align-items-center mb-1">
-            <span style="width:12px;height:12px;background:#2ecc71;border-radius:50%;margin-right:8px;"></span>
-            <small>Ramah (Aman)</small>
-        </div>
-        <div class="d-flex align-items-center mb-1">
-            <span style="width:12px;height:12px;background:#e74c3c;border-radius:50%;margin-right:8px;"></span>
-            <small>Bermasalah</small>
-        </div>
-        <div class="d-flex align-items-center">
-            <span style="width:12px;height:12px;background:#95a5a6;border-radius:50%;margin-right:8px;"></span>
-            <small>Belum Ada Data</small>
-        </div>
-    </div>
-
+    <!-- Modal Panduan / FAQ -->
     <div class="modal fade" id="faqModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg"> <div class="modal-content">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
                 <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold">Pertanyaan Umum (FAQ)</h5>
+                    <h5 class="modal-title fw-bold">Panduan Peta Mobilitas Aktif & Walkability</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="accordion accordion-flush" id="accordionFAQ">
-                        
                         <div class="accordion-item">
                             <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                                    <i class="fa fa-map-marked-alt me-2 text-primary"></i> Apa arti warna pada peta?
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                    <i class="fa fa-route me-2 text-success"></i> Apa bedanya Ruas Jalan dan Jalur Khusus Pejalan Kaki & Sepeda?
                                 </button>
                             </h2>
-                            <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#accordionFAQ">
-                                <div class="accordion-body text-muted">
-                                    <strong class="text-success">Hijau:</strong> Jalur ramah pejalan kaki (Skor Walkability Positif).<br>
-                                    <strong class="text-danger">Merah:</strong> Jalur bermasalah atau banyak kerusakan (Skor Negatif).<br>
-                                    <strong class="text-secondary">Abu-abu:</strong> Belum ada data survei lengkap.
+                            <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#accordionFAQ">
+                                <div class="accordion-body text-muted small">
+                                    <strong>Ruas Jalan (Garis Utuh):</strong> Jalan raya bermotor (Kota/Provinsi) yang dinilai kondisi fasilitas trotoarnya (Hijau = ramah, Merah = bermasalah, Abu = belum ada data).<br><br>
+                                    <strong>Jalur Khusus Pejalan Kaki & Sepeda (Garis Putus-putus Teal):</strong> Jalur khusus mobilitas aktif yang bebas atau terproteksi dari kendaraan bermotor, seperti jalur paving pesisir, *jogging track* taman, jalur sepeda terproteksi, atau koridor khusus pejalan kaki.
                                 </div>
                             </div>
                         </div>
-
                         <div class="accordion-item">
                             <h2 class="accordion-header">
                                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                    <i class="fa fa-camera me-2 text-danger"></i> Bagaimana cara melapor?
+                                    <i class="fa fa-tree me-2 text-success"></i> Bagaimana fungsi data Pohon Peneduh?
                                 </button>
                             </h2>
                             <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#accordionFAQ">
-                                <div class="accordion-body text-muted">
-                                    Klik tombol <strong>"Lapor Kerusakan"</strong> di pojok kanan bawah. Pastikan GPS Anda aktif agar lokasi terdeteksi otomatis. Foto bukti wajib dilampirkan.
+                                <div class="accordion-body text-muted small">
+                                    Titik pohon mencatat jenis pohon, kualitas keteduhan, serta kondisi kesehatan/akar. Saat peta diperbesar (*zoom in*), lingkaran hijau transparan menunjukkan estimasi lebar tajuk/kanopi untuk mengidentifikasi area yang masih panas dan membutuhkan penanaman pohon baru.
                                 </div>
                             </div>
                         </div>
-
                         <div class="accordion-item">
                             <h2 class="accordion-header">
                                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
-                                    <i class="fa fa-users me-2 text-info"></i> Siapa pengelola data ini?
+                                    <i class="fa fa-camera me-2 text-danger"></i> Bagaimana cara menambah laporan atau data pohon?
                                 </button>
                             </h2>
                             <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#accordionFAQ">
-                                <div class="accordion-body text-muted">
-                                    Data ini dikelola oleh komunitas <strong>Koalisi Pejalan Kaki Bali</strong> dan bersifat partisipatif (crowdsourcing). Data laporan warga akan diteruskan ke dinas terkait untuk advokasi perbaikan.
+                                <div class="accordion-body text-muted small">
+                                    Klik tombol <strong>"Input Data / Lapor"</strong> di pojok kanan bawah. Pastikan izin GPS aktif agar koordinat titik kendala, pohon peneduh, atau fasilitas tercatat akurat.
                                 </div>
                             </div>
                         </div>
-
-                    </div>
-                    
-                    <div class="mt-4 text-center bg-light p-3 rounded">
-                        <small>Punya pertanyaan lain? Hubungi kami di <a href="mailto:kopekabali@gmail.com">kopekabali@gmail.com</a></small>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- FAB Button -->
     <button onclick="goToForm()" class="btn btn-warning fab-btn">
-        <i class="fa-solid fa-camera me-1"></i> Lapor Kerusakan
+        <i class="fa-solid fa-plus-circle me-1"></i> Input Data / Lapor
     </button>
 
     <div id="map"></div>
@@ -298,437 +385,531 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // Fungsi Buka/Tutup Filter di Mobile
-        function toggleFilter() {
-            const card = document.getElementById('filterCard');
-            // Toggle class 'show-mobile'
-            if (card.classList.contains('show-mobile')) {
-                card.classList.remove('show-mobile');
-            } else {
-                card.classList.add('show-mobile');
-            }
-        }
-        
-        // --- KONFIGURASI ---
+        // --- 1. KONFIGURASI SUPABASE ---
         const SUPABASE_URL = 'https://rlsboveqzkrdcbohxnsi.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_OZYrnFcWViuxtMHo12cLjg_NbhUzdiF';
-
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Init Map
+        // --- 2. INISIALISASI PETA ---
         const map = L.map('map', { zoomControl: false }).setView([-8.6500, 115.2167], 13);
         L.control.zoom({ position: 'bottomleft' }).addTo(map);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_30fe_1_143028887eece1f45792790a').addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO | Kopeka Bali'
+        }).addTo(map);
 
-        // Variables
-        let rawGeoJSON = null; 
-        let geoJsonLayer = null; 
-        let selectedLayer = null; // Menyimpan layer yg sedang diklik (highlight)
-        
-        // Data Struktur untuk Chained Dropdown }
-        let districtHierarchy = {}; 
+        // --- 3. MANAJEMEN LAYER GROUPS (TRIGGER PER LAYER) ---
+        const layers = {
+            ways: L.layerGroup().addTo(map),
+            activePaths: L.layerGroup().addTo(map),
+            trees: L.layerGroup().addTo(map),
+            treeCanopies: L.layerGroup(), // Ditampilkan otomatis saat zoom >= 16 jika layer trees aktif
+            amenities: L.layerGroup().addTo(map),
+            reports: L.layerGroup().addTo(map)
+        };
 
-        // Klik area kosong untuk reset highlight
-        map.on('click', function(e) {
-            if (selectedLayer) {
-                geoJsonLayer.resetStyle(selectedLayer);
+        let rawWaysGeoJSON = null;
+        let rawActivePathsGeoJSON = null;
+        let selectedLayer = null;
+        let districtHierarchy = {};
+
+        // Klik area kosong peta untuk reset highlight garis
+        map.on('click', () => {
+            if (selectedLayer && selectedLayer.defaultStyle) {
+                selectedLayer.setStyle(selectedLayer.defaultStyle);
                 selectedLayer = null;
             }
         });
 
-        // --- 1. LOGIKA PINDAH KE HALAMAN FORM ---
+        // Tampilkan lingkaran kanopi pohon saat zoom dekat (>= 16)
+        map.on('zoomend', () => {
+            const treesChecked = document.getElementById('chkTrees').checked;
+            if (treesChecked && map.getZoom() >= 16) {
+                if (!map.hasLayer(layers.treeCanopies)) map.addLayer(layers.treeCanopies);
+            } else {
+                if (map.hasLayer(layers.treeCanopies)) map.removeLayer(layers.treeCanopies);
+            }
+        });
+
+        // Toggle Panel Kontrol Mobile
+        function toggleControlPanel() {
+            document.getElementById('controlPanelCard').classList.toggle('show-mobile');
+        }
+
+        // Toggle Per Layer (Trigger)
+        function toggleLayer(layerKey, isVisible) {
+            const targetGroup = layers[layerKey];
+            if (!targetGroup) return;
+
+            if (isVisible) {
+                map.addLayer(targetGroup);
+                if (layerKey === 'trees' && map.getZoom() >= 16) {
+                    map.addLayer(layers.treeCanopies);
+                }
+            } else {
+                map.removeLayer(targetGroup);
+                if (layerKey === 'trees') {
+                    map.removeLayer(layers.treeCanopies);
+                }
+            }
+        }
+
+        // Preset Multi-Stakeholder
+        function applyPreset(preset, btnEl) {
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+
+            const config = {
+                all:        { ways: true,  activePaths: true,  trees: true,  amenities: true,  reports: true },
+                pedestrian: { ways: true,  activePaths: true,  trees: false, amenities: true,  reports: true },
+                cyclist:    { ways: false, activePaths: true,  trees: true,  amenities: true,  reports: true },
+                trees:      { ways: true,  activePaths: true,  trees: true,  amenities: false, reports: false }
+            }[preset];
+
+            if (!config) return;
+
+            const mapIds = {
+                ways: 'chkWays',
+                activePaths: 'chkActivePaths',
+                trees: 'chkTrees',
+                amenities: 'chkAmenities',
+                reports: 'chkReports'
+            };
+
+            Object.keys(config).forEach(key => {
+                const checkbox = document.getElementById(mapIds[key]);
+                checkbox.checked = config[key];
+                toggleLayer(key, config[key]);
+            });
+        }
+
+        // Redirect ke Form Input dengan Koordinat GPS
         function goToForm() {
-            const btn = document.querySelector('.fab-btn');
-            // btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Mencari Lokasi...';
-            
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition((pos) => {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-                    // Redirect ke file form dengan membawa data koordinat
-                    window.location.href = `form-lapor.html?lat=${lat}&lng=${lng}`;
-                }, (err) => {
+                    window.location.href = `form-lapor.html?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`;
+                }, () => {
                     alert("Gagal mengambil lokasi GPS. Pastikan izin lokasi aktif.");
-                    window.location.href = `form-lapor.html`; // Tetap buka form meski tanpa GPS
+                    window.location.href = `form-lapor.html`;
                 });
             } else {
                 window.location.href = `form-lapor.html`;
             }
         }
 
-        // --- LOAD DATA ---
+        // --- 4. LOAD SEMUA DATA DARI SUPABASE ---
         async function initData() {
-            // 1. Load Jalan & Laporan
-            const { data } = await supabaseClient.from('api_ways_geojson').select('*').single();
-            const { data: reports } = await supabaseClient.from('api_reports_geojson').select('*').single();
+            const [waysRes, activePathsRes, treesRes, amenitiesRes, reportsRes] = await Promise.allSettled([
+                supabaseClient.from('api_ways_geojson').select('*').single(),
+                supabaseClient.from('api_active_paths_geojson').select('*').single(),
+                supabaseClient.from('api_trees_geojson').select('*').single(),
+                supabaseClient.from('api_amenities_geojson').select('*').single(),
+                supabaseClient.from('api_reports_geojson').select('*').single()
+            ]);
 
-            if(data && data.row_to_json) {
-                // console.log("CONTOH DATA:", data.row_to_json.features[0].properties);
-                // --- FILTER DATA BARU (Hanya ambil data di area Bali) ---
-                // Longitude Bali: ~115, Latitude Bali: ~-8
-                const cleanFeatures = data.row_to_json.features.filter(f => {
-                    if(!f.geometry || !f.geometry.coordinates) return false;
-                    
-                    // Cek satu titik sampel dari garis jalan
-                    // GeoJSON format: [Longitude, Latitude]
-                    // Kita ambil titik pertama [0]
-                    const firstPoint = f.geometry.coordinates[0]; 
-                    const lng = firstPoint[0];
-                    const lat = firstPoint[1];
-
-                    // Batas Kotak (Bounding Box) Denpasar/Bali Aman
-                    // Lng: 114 - 116, Lat: -8 sampai -9
-                    return (lng > 114 && lng < 116 && lat < -8 && lat > -9);
-                });
-
-                // Simpan data yang sudah bersih saja
-                rawGeoJSON = { type: "FeatureCollection", features: cleanFeatures };
-                
-                processHierarchy(rawGeoJSON.features); 
-                renderMap(rawGeoJSON.features, false); 
+            // A. Ruas Jalan Raya (Walkability)
+            if (waysRes.status === 'fulfilled' && waysRes.value.data?.row_to_json?.features) {
+                const cleanFeatures = waysRes.value.data.row_to_json.features.filter(isInsideBaliBBox);
+                rawWaysGeoJSON = { type: "FeatureCollection", features: cleanFeatures };
+                processHierarchy(cleanFeatures);
+                renderWays(cleanFeatures, false);
             }
 
-            // --- LOAD AMENITIES (FASILITAS) ---
-            const { data: amenitiesData } = await supabaseClient.from('api_amenities_geojson').select('*').single();
-            
-            if(amenitiesData && amenitiesData.row_to_json) {
-                L.geoJSON(amenitiesData.row_to_json, {
-                    
-                    // 1. GANTI STYLE TITIK (Lingkaran Biru)
-                    pointToLayer: (feature, latlng) => {
-                        return L.circleMarker(latlng, {
-                            radius: 6,              // Ukuran sedikit lebih kecil dari masalah
-                            fillColor: "#3498db",   // WARNA BIRU (Khas Fasilitas)
-                            color: "#fff",          // Garis tepi putih
-                            weight: 1,
-                            opacity: 1,
-                            fillOpacity: 0.8
-                        });
-                    },
-
-                    // 2. Popup Card UI (Versi Biru)
-                    onEachFeature: (feature, layer) => {
-                        const p = feature.properties;
-                        
-                        // Icon Logic
-                        let icon = 'fa-check';
-                        if(p.amenity_type.includes('Lampu')) icon = 'fa-lightbulb';
-                        if(p.amenity_type.includes('Kursi')) icon = 'fa-chair';
-                        if(p.amenity_type.includes('Pohon') || p.amenity_type.includes('Taman')) icon = 'fa-tree';
-                        if(p.amenity_type.includes('Ramp')) icon = 'fa-wheelchair';
-
-                        // Gambar Default (Jika kosong, pakai gambar ilustrasi kota/taman)
-                        // Tips: Anda bisa ganti URL ini dengan gambar placeholder aset pemkot
-                        const defaultImg = 'https://images.unsplash.com/photo-1519331379826-fda8feb0c1f1?auto=format&fit=crop&w=300&q=80'; 
-                        const imgUrl = p.photo_url || defaultImg;
-
-                        const popupContent = `
-                            <div>
-                                <div style="position:relative">
-                                    <img src="${imgUrl}" class="popup-hero-img" alt="Fasilitas">
-                                    
-                                    <span class="badge bg-primary" style="position:absolute; bottom:10px; left:10px; opacity:0.95; font-size:0.85rem">
-                                        <i class="fa ${icon} me-1"></i> ${p.amenity_type}
-                                    </span>
-                                </div>
-
-                                <div class="popup-card-body">
-                                    <h5 class="fw-bold mb-2" style="color:#2c3e50;">${p.name || 'Fasilitas Umum'}</h5>
-                                    <p style="margin:0; font-size:0.95rem; color:#333; line-height:1.5">
-                                        "${p.description || 'Fasilitas umum tersedia di lokasi ini.'}"
-                                    </p>
-                                    
-                                    <div class="reporter-info" style="border-top: 1px solid #e1f5fe;padding:10px 0;">
-                                        <div style="flex-grow:1; color:#0288d1; font-weight:600; font-size:0.8rem;">
-                                            <i class="fa fa-check-circle me-1"></i>Pemerintah Kota / Provinsi
-                                        </div>
-                                        <div class="text-muted small">
-                                            ID Fasilitas: ${p.id ? p.id.substring(0,8) : '-'}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-
-                        layer.bindPopup(popupContent);
-                    }
-                }).addTo(map);
+            // B. Jalur Khusus Pejalan Kaki & Sepeda
+            if (activePathsRes.status === 'fulfilled' && activePathsRes.value.data?.row_to_json?.features) {
+                const pathFeatures = activePathsRes.value.data.row_to_json.features;
+                rawActivePathsGeoJSON = { type: "FeatureCollection", features: pathFeatures };
+                processHierarchy(pathFeatures); // Gabungkan wilayah jika ada kecamatan baru
+                renderActivePaths(pathFeatures);
             }
 
-            // Render Titik Laporan
-            if(reports && reports.row_to_json && reports.row_to_json.features) {
-                L.geoJSON(reports.row_to_json, {
-                    pointToLayer: function (feature, latlng) {
-                        return L.circleMarker(latlng, {
-                            radius: 6,
-                            fillColor: "#e74c3c",
-                            color: "#ffffff",
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 0.9
-                        });
-                    },
-                    onEachFeature: function(feature, layer) {
-                        const p = feature.properties;
+            // C. Pohon Peneduh
+            if (treesRes.status === 'fulfilled' && treesRes.value.data?.row_to_json?.features) {
+                renderTrees(treesRes.value.data.row_to_json.features);
+            }
 
-                        // 1. Logic Tanggal
-                        let dateStr = "Baru Saja";
-                        try {
-                            if (p.created_at) {
-                                const dateObj = new Date(p.created_at);
-                                if (!isNaN(dateObj.getTime())) {
-                                    dateStr = dateObj.toLocaleDateString('id-ID', { 
-                                        day: 'numeric', month: 'short', year: 'numeric',
-                                        hour: '2-digit', minute: '2-digit'
-                                    });
-                                }
-                            }
-                        } catch (e) { }
+            // D. Fasilitas & POI
+            if (amenitiesRes.status === 'fulfilled' && amenitiesRes.value.data?.row_to_json?.features) {
+                renderAmenities(amenitiesRes.value.data.row_to_json.features);
+            }
 
-                        // 2. Foto
-                        const imgSection = p.photo_url 
-                            ? `<div style="width:100%; height:160px; background: #f0f0f0 url('${p.photo_url}') no-repeat center center; background-size:cover; border-radius: 8px; margin-bottom:12px; border:1px solid #e0e0e0;"></div>` 
-                            : '';
-
-                        // 3. Nama Jalan (Otomatis dari Database)
-                        const lokasiJalan = p.nearest_street 
-                            ? `<i class="fa fa-road text-primary"></i> Sekitar ${p.nearest_street}`
-                            : `<i class="fa fa-map-marker-alt text-muted"></i> Lokasi Terpantau`;
-
-                        // 4. Template Popup
-                        const popupContent = `
-                            <div style="font-family: 'Segoe UI', sans-serif; min-width:280px; padding: 35px 15px 15px 15px;">
-                                
-                                <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px; border-bottom:1px solid #eee; padding-bottom:8px;">
-                                    <div>
-                                        <span class="badge bg-danger" style="font-size: 0.85rem; padding: 6px 10px; margin-bottom: 6px; display: inline-block;">
-                                            <i class="fa fa-exclamation-triangle"></i> ${p.report_type || 'Laporan'}
-                                        </span>
-                                        <div style="font-weight:bold; font-size:0.9rem; color:#2c3e50;">
-                                            ${lokasiJalan}
-                                        </div>
-                                    </div>
-                                    <div style="color:#95a5a6; font-size:0.7rem; text-align:right; min-width:60px; padding-top:4px;">
-                                        ${dateStr}
-                                    </div>
-                                </div>
-
-                                ${imgSection}
-
-                                <div style="background:#f8f9fa; padding:12px; border-radius:8px; border-left: 4px solid #e74c3c; font-size:0.95rem; color:#444; line-height: 1.5; margin-bottom:12px; font-style:italic;">
-                                    "${p.description || 'Tidak ada deskripsi tambahan.'}"
-                                </div>
-
-                                <div style="text-align:right; border-top:1px solid #eee; padding-top:8px;">
-                                    <small style="color:#bdc3c7; font-size:0.7rem;">ID Laporan: ${p.id ? p.id.substring(0,8) : '-'}</small>
-                                </div>
-                            </div>
-                        `;
-                        
-                        layer.bindPopup(popupContent, { minWidth: 300, maxWidth: 320 });
-                    }
-                }).addTo(map);
+            // E. Titik Kendala / Laporan
+            if (reportsRes.status === 'fulfilled' && reportsRes.value.data?.row_to_json?.features) {
+                renderReports(reportsRes.value.data.row_to_json.features);
             }
         }
 
-        // --- A. LOGIC CHAINED DROPDOWN ---
+        // Validasi Koordinat Bali (Aman untuk LineString & MultiLineString)
+        function isInsideBaliBBox(feature) {
+            if (!feature.geometry || !feature.geometry.coordinates) return false;
+            let coords = feature.geometry.coordinates;
+            while (Array.isArray(coords[0])) {
+                coords = coords[0];
+            }
+            const [lng, lat] = coords;
+            return (lng > 114 && lng < 116 && lat < -8 && lat > -9);
+        }
+
+        // --- 5. RENDER MASING-MASING LAYER ---
+
+        // LAYER 1: RUAS JALAN RAYA
+        function renderWays(features, autoZoom = false) {
+            layers.ways.clearLayers();
+            document.getElementById('cntWays').innerText = features.length;
+
+            const geoLayer = L.geoJSON(features, {
+                style: (feature) => {
+                    const score = feature.properties.walkability_index || 0;
+                    const problems = feature.properties.total_problems || 0;
+                    let color = '#95a5a6';
+                    if (problems > 0 && score <= 0) color = '#e74c3c';
+                    else if (score > 0) color = '#2ecc71';
+                    return { color, weight: 4, opacity: 0.75 };
+                },
+                onEachFeature: (feature, layer) => {
+                    layer.defaultStyle = {
+                        color: layer.options.color,
+                        weight: 4,
+                        opacity: 0.75
+                    };
+
+                    layer.on('click', (e) => {
+                        L.DomEvent.stopPropagation(e);
+                        if (selectedLayer && selectedLayer.defaultStyle) {
+                            selectedLayer.setStyle(selectedLayer.defaultStyle);
+                        }
+                        selectedLayer = e.target;
+                        e.target.setStyle({ color: '#00d2ff', weight: 8, opacity: 1 });
+                        e.target.bringToFront();
+                    });
+
+                    const p = feature.properties;
+                    const score = p.walkability_index ?? 0;
+                    const headerColor = score < 0 ? '#e74c3c' : (score > 0 ? '#2ecc71' : '#7f8c8d');
+                    const statusText = score < 0 ? 'TIDAK RAMAH' : (score > 0 ? 'RAMAH PEJALAN' : 'NETRAL');
+
+                    layer.bindPopup(`
+                        <div>
+                            <div style="background:${headerColor}; color:white; padding:14px; text-align:center;">
+                                <h6 class="m-0 fw-bold text-uppercase" style="font-size:0.78rem; letter-spacing:1px;">${statusText}</h6>
+                                <div style="font-size:2.2rem; font-weight:bold; line-height:1.1;">${score}</div>
+                                <small style="opacity:0.9;">Walkability Score</small>
+                            </div>
+                            <div class="p-3 bg-white">
+                                <h6 class="fw-bold mb-1 text-dark">${p.street_name || 'Jalan Tanpa Nama'}</h6>
+                                <div class="text-muted small mb-2">
+                                    <i class="fa fa-map-marker-alt"></i> ${p.region_name || '-'}, ${p.district_name || '-'}<br>
+                                    <span class="badge bg-light text-dark border mt-1">${p.authority || 'Non-Status'}</span>
+                                </div>
+                                <div class="row g-2 text-center mb-3">
+                                    <div class="col-6">
+                                        <div class="p-2 border rounded bg-light">
+                                            <i class="fa fa-check-circle text-primary"></i>
+                                            <div class="fw-bold">${p.total_amenities ?? 0}</div>
+                                            <small class="text-muted" style="font-size:0.7rem;">Fasilitas</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2 border rounded bg-light">
+                                            <i class="fa fa-exclamation-triangle text-danger"></i>
+                                            <div class="fw-bold">${p.total_problems ?? 0}</div>
+                                            <small class="text-muted" style="font-size:0.7rem;">Kendala</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button onclick="goToForm()" class="btn btn-outline-danger btn-sm w-100 rounded-pill fw-bold">
+                                    <i class="fa fa-camera"></i> Lapor Kondisi Ruas Ini
+                                </button>
+                            </div>
+                        </div>
+                    `);
+                }
+            });
+
+            layers.ways.addLayer(geoLayer);
+
+            if (autoZoom && features.length > 0) {
+                map.fitBounds(geoLayer.getBounds());
+            }
+        }
+
+        // LAYER 2: JALUR KHUSUS PEJALAN KAKI & SEPEDA (MOBILITAS AKTIF)
+        function renderActivePaths(features) {
+            layers.activePaths.clearLayers();
+            document.getElementById('cntActivePaths').innerText = features.length;
+
+            const pathLayer = L.geoJSON(features, {
+                style: () => ({
+                    color: '#0d9488', // Teal tegas agar beda dari jalan bermotor
+                    weight: 5,
+                    opacity: 0.9,
+                    dashArray: '8, 6'
+                }),
+                onEachFeature: (feature, layer) => {
+                    layer.defaultStyle = { color: '#0d9488', weight: 5, opacity: 0.9, dashArray: '8, 6' };
+
+                    layer.on('click', (e) => {
+                        L.DomEvent.stopPropagation(e);
+                        if (selectedLayer && selectedLayer.defaultStyle) {
+                            selectedLayer.setStyle(selectedLayer.defaultStyle);
+                        }
+                        selectedLayer = e.target;
+                        e.target.setStyle({ color: '#0284c7', weight: 8, opacity: 1, dashArray: '' });
+                        e.target.bringToFront();
+                    });
+
+                    const p = feature.properties;
+                    const lengthLabel = p.length_m ? `${p.length_m} meter` : '-';
+                    const wheelchairBadge = p.is_wheelchair_friendly
+                        ? `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fa fa-wheelchair"></i> Aksesibel</span>`
+                        : `<span class="badge bg-warning-subtle text-dark border">Terbatas</span>`;
+                    const lightBadge = p.has_lighting
+                        ? `<span class="badge bg-info-subtle text-dark border"><i class="fa fa-lightbulb"></i> Berlampu</span>`
+                        : `<span class="badge bg-secondary-subtle text-muted border">Minim Lampu</span>`;
+
+                    layer.bindPopup(`
+                        <div>
+                            <div style="background:#0d9488; color:white; padding:12px 15px;">
+                                <span class="badge bg-white text-dark mb-1"><i class="fa fa-person-walking"></i> <i class="fa fa-bicycle"></i> Jalur Mobilitas Aktif</span>
+                                <h6 class="m-0 fw-bold">${p.name || 'Jalur Khusus Non-Bermotor'}</h6>
+                            </div>
+                            <div class="p-3 bg-white">
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    <span class="badge bg-dark">${p.path_type || 'Shared Path'}</span>
+                                    ${wheelchairBadge}
+                                    ${lightBadge}
+                                </div>
+                                <table class="table table-sm table-borderless small mb-2">
+                                    <tr><td class="text-muted ps-0">Panjang Segmen</td><td class="fw-bold text-end">${lengthLabel}</td></tr>
+                                    <tr><td class="text-muted ps-0">Permukaan</td><td class="fw-bold text-end">${p.surface || '-'}</td></tr>
+                                    <tr><td class="text-muted ps-0">Lebar Efektif</td><td class="fw-bold text-end">${p.width_m ? p.width_m + ' m' : '-'}</td></tr>
+                                </table>
+                                <p class="small text-muted bg-light p-2 rounded mb-0">${p.notes || 'Jalur khusus ramah pejalan kaki dan pesepeda.'}</p>
+                            </div>
+                        </div>
+                    `);
+                }
+            });
+
+            layers.activePaths.addLayer(pathLayer);
+        }
+
+        // LAYER 3: POHON PENEDUH & KANOPI
+        function renderTrees(features) {
+            layers.trees.clearLayers();
+            layers.treeCanopies.clearLayers();
+            document.getElementById('cntTrees').innerText = features.length;
+
+            L.geoJSON(features, {
+                pointToLayer: (feature, latlng) => {
+                    const p = feature.properties;
+                    const isIssue = p.health_status && p.health_status !== 'Sehat';
+                    const markerColor = isIssue ? '#f59e0b' : '#16a34a';
+
+                    // Tambahkan lingkaran proyeksi kanopi ke layer treeCanopies
+                    const canopyRadius = (parseFloat(p.canopy_diameter_m) || 3) / 2;
+                    L.circle(latlng, {
+                        radius: canopyRadius,
+                        color: markerColor,
+                        weight: 1,
+                        fillColor: markerColor,
+                        fillOpacity: 0.18,
+                        interactive: false
+                    }).addTo(layers.treeCanopies);
+
+                    return L.circleMarker(latlng, {
+                        radius: 6,
+                        fillColor: markerColor,
+                        color: '#ffffff',
+                        weight: 1.5,
+                        opacity: 1,
+                        fillOpacity: 0.92
+                    });
+                },
+                onEachFeature: (feature, layer) => {
+                    const p = feature.properties;
+                    const isIssue = p.health_status && p.health_status !== 'Sehat';
+                    const statusBadge = isIssue ? 'bg-warning text-dark' : 'bg-success';
+                    const imgHtml = p.photo_url ? `<img src="${p.photo_url}" class="popup-hero-img" alt="Foto Pohon">` : '';
+
+                    layer.bindPopup(`
+                        <div>
+                            ${imgHtml}
+                            <div class="p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <span class="badge ${statusBadge}"><i class="fa fa-tree me-1"></i> ${p.health_status || 'Sehat'}</span>
+                                    <small class="text-muted">Tajuk: ~${p.canopy_diameter_m || '-'} m</small>
+                                </div>
+                                <h6 class="fw-bold mb-0 text-dark mt-1">${p.species_name || 'Pohon Peneduh'}</h6>
+                                <small class="text-muted d-block mb-2">${p.local_name ? `Nama Lokal: ${p.local_name}` : 'Inventaris Pohon Kota'}</small>
+                                <div class="bg-light p-2 rounded border small d-flex justify-content-between">
+                                    <span>Kualitas Teduh: <strong>${p.shade_quality || '-'}</strong></span>
+                                    <span>Batang: <strong>${p.trunk_diameter_cm ? p.trunk_diameter_cm + ' cm' : '-'}</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }
+            }).addTo(layers.trees);
+        }
+
+        // LAYER 4: FASILITAS & POI
+        function renderAmenities(features) {
+            layers.amenities.clearLayers();
+            document.getElementById('cntAmenities').innerText = features.length;
+
+            L.geoJSON(features, {
+                pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+                    radius: 6,
+                    fillColor: "#2563eb",
+                    color: "#fff",
+                    weight: 1.5,
+                    opacity: 1,
+                    fillOpacity: 0.85
+                }),
+                onEachFeature: (feature, layer) => {
+                    const p = feature.properties;
+                    const type = p.amenity_type || 'Fasilitas';
+                    let icon = 'fa-check';
+                    if (type.includes('Lampu')) icon = 'fa-lightbulb';
+                    if (type.includes('Kursi')) icon = 'fa-chair';
+                    if (type.includes('Pohon') || type.includes('Taman')) icon = 'fa-tree';
+                    if (type.includes('Ramp')) icon = 'fa-wheelchair';
+                    if (type.includes('Halte') || type.includes('Bus')) icon = 'fa-bus';
+                    if (type.includes('Sepeda')) icon = 'fa-bicycle';
+
+                    const imgHtml = p.photo_url ? `<img src="${p.photo_url}" class="popup-hero-img" alt="Fasilitas">` : '';
+
+                    layer.bindPopup(`
+                        <div>
+                            ${imgHtml}
+                            <div class="p-3">
+                                <span class="badge bg-primary mb-2"><i class="fa ${icon} me-1"></i> ${type}</span>
+                                <h6 class="fw-bold mb-1 text-dark">${p.name || 'Fasilitas Umum'}</h6>
+                                <p class="small text-muted mb-2">${p.description || 'Fasilitas pendukung mobilitas aktif.'}</p>
+                                <div class="border-top pt-2 d-flex justify-content-between small text-muted">
+                                    <span><i class="fa fa-check-circle text-primary"></i> Terverifikasi</span>
+                                    <span>ID: ${p.id ? p.id.substring(0, 8) : '-'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }
+            }).addTo(layers.amenities);
+        }
+
+        // LAYER 5: TITIK KENDALA / LAPORAN WARGA
+        function renderReports(features) {
+            layers.reports.clearLayers();
+            document.getElementById('cntReports').innerText = features.length;
+
+            L.geoJSON(features, {
+                pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+                    radius: 6,
+                    fillColor: "#dc2626",
+                    color: "#ffffff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }),
+                onEachFeature: (feature, layer) => {
+                    const p = feature.properties;
+                    let dateStr = "Baru Saja";
+                    if (p.created_at) {
+                        const d = new Date(p.created_at);
+                        if (!isNaN(d.getTime())) {
+                            dateStr = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+                        }
+                    }
+
+                    const imgHtml = p.photo_url ? `<img src="${p.photo_url}" class="popup-hero-img" alt="Bukti Laporan">` : '';
+                    const lokasiJalan = p.nearest_street ? `<i class="fa fa-road text-primary"></i> Sekitar ${p.nearest_street}` : `<i class="fa fa-map-marker-alt text-muted"></i> Lokasi Terpantau`;
+
+                    layer.bindPopup(`
+                        <div>
+                            ${imgHtml}
+                            <div class="p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="badge bg-danger"><i class="fa fa-exclamation-triangle"></i> ${p.report_type || 'Kendala'}</span>
+                                    <small class="text-muted">${dateStr}</small>
+                                </div>
+                                <div class="fw-bold small text-dark mb-2">${lokasiJalan}</div>
+                                <div class="bg-light p-2 rounded border-start border-danger border-3 small fst-italic text-dark">
+                                    "${p.description || 'Tidak ada deskripsi tambahan.'}"
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }
+            }).addTo(layers.reports);
+        }
+
+        // --- 6. FILTER WILAYAH (CHAINED DROPDOWN) ---
         function processHierarchy(features) {
-            const authSet = new Set();
+            const selKec = document.getElementById('selKecamatan');
+            const selAuth = document.getElementById('selAuth');
+            const existingKec = new Set(Array.from(selKec.options).map(o => o.value));
+            const existingAuth = new Set(Array.from(selAuth.options).map(o => o.value));
 
             features.forEach(f => {
                 const p = f.properties;
-                const dist = p.district_name || 'Lainnya';
-                const region = p.region_name || 'Lainnya';
-                
-                // 1. Bangun Hierarchy Map
-                if (!districtHierarchy[dist]) {
-                    districtHierarchy[dist] = new Set();
+                if (p.district_name) {
+                    if (!districtHierarchy[p.district_name]) districtHierarchy[p.district_name] = new Set();
+                    if (p.region_name) districtHierarchy[p.district_name].add(p.region_name);
                 }
-                districtHierarchy[dist].add(region);
-
-                // 2. Kumpulkan Authority
-                if(p.authority) authSet.add(p.authority);
+                if (p.authority && !existingAuth.has(p.authority)) {
+                    existingAuth.add(p.authority);
+                    selAuth.add(new Option(p.authority.toUpperCase(), p.authority));
+                }
             });
 
-            // Populate District Dropdown
-            const selKec = document.getElementById('selKecamatan');
             Object.keys(districtHierarchy).sort().forEach(d => {
-                let opt = new Option(d.toUpperCase(), d);
-                selKec.add(opt);
-            });
-
-            // Populate Authority Dropdown
-            const selAuth = document.getElementById('selAuth');
-            Array.from(authSet).sort().forEach(a => {
-                let opt = new Option(a.toUpperCase(), a);
-                selAuth.add(opt);
+                if (!existingKec.has(d)) {
+                    selKec.add(new Option(d.toUpperCase(), d));
+                }
             });
         }
 
-        // Dipanggil saat Kecamatan berubah
         function handleDistrictChange() {
             const selectedDist = document.getElementById('selKecamatan').value;
             const selDesa = document.getElementById('selDesa');
-            
-            // Reset Desa Dropdown
             selDesa.innerHTML = '<option value="all">Semua Desa/Kelurahan</option>';
 
             if (selectedDist !== 'all' && districtHierarchy[selectedDist]) {
-                // Isi Desa sesuai Kecamatan yg dipilih
                 Array.from(districtHierarchy[selectedDist]).sort().forEach(r => {
-                    let opt = new Option(r, r);
-                    selDesa.add(opt);
+                    selDesa.add(new Option(r, r));
                 });
             }
-            
-            // Apply filter peta juga
             applyFilter();
         }
 
-        // --- B. FILTERING MAP ---
         function applyFilter() {
-            if(!rawGeoJSON) return;
-
             const valKec = document.getElementById('selKecamatan').value;
             const valDesa = document.getElementById('selDesa').value;
             const valAuth = document.getElementById('selAuth').value;
+            const isDefault = (valKec === 'all' && valDesa === 'all' && valAuth === 'all');
 
-            const filtered = rawGeoJSON.features.filter(f => {
-                const p = f.properties;
-                const matchKec = (valKec === 'all') || (p.district_name === valKec);
-                const matchDesa = (valDesa === 'all') || (p.region_name === valDesa);
-                const matchAuth = (valAuth === 'all') || (p.authority === valAuth);
-                return matchKec && matchDesa && matchAuth;
-            });
-
-            // LOGIKA ZOOM PINTAR:
-            // Jika filter kembali ke "Semua", kita reset ke posisi default Denpasar.
-            // Jika sedang memfilter spesifik, baru kita auto-zoom (fitBounds).
-            if (valKec === 'all' && valDesa === 'all' && valAuth === 'all') {
-                renderMap(filtered, false); // Matikan auto zoom
-                map.setView([-8.6500, 115.2167], 13); // Reset manual ke tengah kota
-            } else {
-                renderMap(filtered, true); // Nyalakan auto zoom untuk filter spesifik
-            }
-        }
-
-        // --- C. RENDER & HIGHLIGHT LOGIC ---
-        function renderMap(features, autoZoom = false) {
-            if(geoJsonLayer) map.removeLayer(geoJsonLayer);
-
-            document.getElementById('totalCount').innerText = `${features.length} Ruas Jalan Ditampilkan`;
-
-            geoJsonLayer = L.geoJSON(features, {
-                style: styleFeature,
-                onEachFeature: onEachFeature
-            }).addTo(map);
-
-            // Logika Baru: Hanya zoom jika diminta (autoZoom = true) DAN ada datanya
-            if(autoZoom && features.length > 0) {
-                map.fitBounds(geoJsonLayer.getBounds());
-            }
-        }
-
-        // Fungsi Style Default
-        function styleFeature(feature) {
-            const score = feature.properties.walkability_index || 0;
-            const problems = feature.properties.total_problems || 0;
-            
-            let color = '#95a5a6'; // Abu
-            if (problems > 0 && score <= 0) color = '#e74c3c'; // Merah
-            else if (score > 0) color = '#2ecc71'; // Hijau
-
-            return { color: color, weight: 4, opacity: 0.7 };
-        }
-
-        // Fungsi Interaksi (Click & Highlight)
-        function onEachFeature(feature, layer) {
-            layer.on({
-                click: function(e) {
-                    // PENTING: Mencegah klik tembus ke peta (agar tidak langsung kereset)
-                    L.DomEvent.stopPropagation(e); 
-
-                    // 1. Reset Highlight layer sebelumnya
-                    if (selectedLayer) {
-                        geoJsonLayer.resetStyle(selectedLayer);
-                    }
-
-                    // 2. Set Highlight layer yg diklik
-                    selectedLayer = e.target;
-                    e.target.setStyle({
-                        color: '#00d2ff', // Cyan terang
-                        weight: 8,
-                        opacity: 1
-                    });
-                    
-                    e.target.bringToFront();
-                }
-            });
-
-            const p = feature.properties;
-            const score = p.walkability_index || 0;
-            // const isBad = score < 0;
-            // const headerColor = isBad ? '#e74c3c' : '#2ecc71'; // Merah atau Hijau
-            // const statusText = isBad ? 'TIDAK RAMAH' : 'RAMAH PEJALAN';
-
-            let headerColor, statusText;
-
-            // LOGIKA 3 KONDISI
-            if (score < 0) {
-                headerColor = '#e74c3c'; 
-                statusText = 'TIDAK RAMAH';
-            } else if (score > 0) {
-                headerColor = '#2ecc71'; 
-                statusText = 'RAMAH PEJALAN';
-            } else {
-                headerColor = '#7f8c8d'; // Gray
-                statusText = 'NETRAL';
+            if (rawWaysGeoJSON) {
+                const filteredWays = rawWaysGeoJSON.features.filter(f => {
+                    const p = f.properties;
+                    return (valKec === 'all' || p.district_name === valKec) &&
+                           (valDesa === 'all' || p.region_name === valDesa) &&
+                           (valAuth === 'all' || p.authority === valAuth);
+                });
+                renderWays(filteredWays, !isDefault);
             }
 
-            // Template HTML Popup "Card Style"
-            const popupContent = `
-                <div style="font-family: 'Segoe UI', sans-serif;">
-                    
-                    <div style="background: ${headerColor}; color: white; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
-                        <h6 style="margin:0; font-weight:800; text-transform:uppercase; letter-spacing:1px; font-size: 0.8rem;">${statusText}</h6>
-                        <div style="font-size: 2.5rem; font-weight: bold; line-height: 1;">${score}</div>
-                        <small style="opacity: 0.9">Walkability Score</small>
-                    </div>
+            if (rawActivePathsGeoJSON) {
+                const filteredPaths = rawActivePathsGeoJSON.features.filter(f => {
+                    const p = f.properties;
+                    return (valKec === 'all' || p.district_name === valKec) &&
+                           (valDesa === 'all' || p.region_name === valDesa);
+                });
+                renderActivePaths(filteredPaths);
+            }
 
-                    <div style="padding: 15px; background: white;">
-                        <h6 style="font-weight: bold; margin-bottom: 5px; color: #2c3e50;">${p.street_name || 'Jalan Tanpa Nama'}</h6>
-                        <div style="font-size: 0.8rem; color: #7f8c8d; margin-bottom: 15px;">
-                            <i class="fa fa-map-marker-alt"></i> ${p.region_name || '-'}, ${p.district_name || '-'}
-                            <br>
-                            <span class="badge bg-light text-dark border mt-1">${p.authority || 'Non-Status'}</span>
-                        </div>
-
-                        <div class="row g-2 text-center mb-3">
-                            <div class="col-6">
-                                <div class="p-2 border rounded bg-light">
-                                    <i class="fa fa-tree text-success mb-1" style="font-size:1.2rem"></i>
-                                    <div style="font-weight:bold; font-size:1.1rem">${p.total_amenities}</div>
-                                    <small class="text-muted" style="font-size:0.7rem">Fasilitas</small>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="p-2 border rounded bg-light">
-                                    <i class="fa fa-exclamation-triangle text-danger mb-1" style="font-size:1.2rem"></i>
-                                    <div style="font-weight:bold; font-size:1.1rem">${p.total_problems}</div>
-                                    <small class="text-muted" style="font-size:0.7rem">Masalah</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <a onclick="goToForm()" class="btn btn-outline-danger btn-sm w-100" style="border-radius: 50px; font-weight:600;">
-                            <i class="fa fa-camera"></i> Lapor Kondisi
-                        </a>
-                    </div>
-                </div>
-            `;
-            
-            // Setting lebar popup agar pas
-            layer.bindPopup(popupContent, { minWidth: 280, maxWidth: 300 });
+            if (isDefault) {
+                map.setView([-8.6500, 115.2167], 13);
+            }
         }
 
         initData();
